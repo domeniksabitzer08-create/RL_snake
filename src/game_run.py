@@ -27,7 +27,10 @@ snake = snake_classes.SnakeManager(Vector2D(3,4),Vector2D.right, 3)
 while True:
     screen.fill((0, 0, 0))
     show_grid()
-    #snake.move_step()
+    snake.move_step()
+    #handel_input()
+
+
     snake.render_parts(screen)
 
     for event in pygame.event.get():

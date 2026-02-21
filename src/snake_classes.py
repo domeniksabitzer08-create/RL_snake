@@ -82,6 +82,8 @@ class SnakePart:
     def move_to_pre_part(self):
         """Moves to the grid position of the predecessor."""
         self.pos = self.pre_part.pos
+
+
     # Render functions
     def render(self, screen: pygame.Surface):
         screen_pos = grid_to_screen_pos(self.pos)
@@ -118,14 +120,19 @@ class SnakeManager:
                                                  self.start_pos.y + ((i+1) * self.start_direction.y*-1))
 
     def move_step(self):
-        time.sleep(0.1)
-        self.handle_input()
+        time.sleep(0.3)
+
+        # Move each part to the position of the part before
+        for i in range(len(self.part_list),1,-1):
+            print(f"i:{i} | len: {len(self.part_list)}")
+            self.part_list[i-1].move_to_pre_part()
+        # Move the first part
         self.part_list[0].move_to_direction(self.direction)
-        for i in range(1, len(self.part_list)):
-            self.part_list[i].move_to_pre_part()
+        self.is_dir_changing = False
+
 
     def change_direction(self, new_direction: Vector2D):
-        if (new_direction*-1) == self.direction and not self.is_dir_changing:
+        if not (new_direction*-1) == self.direction and not self.is_dir_changing:
             self.is_dir_changing = True
             self.direction = new_direction
 
