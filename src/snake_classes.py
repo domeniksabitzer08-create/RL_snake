@@ -1,3 +1,5 @@
+from operator import index
+
 import pygame
 from dataclasses import dataclass
 from random import randint
@@ -61,7 +63,7 @@ def grid_to_screen_pos(pos: Vector2D):
 ### Design Variables ###
 
 ### Snake
-part_color = (0,255,0)
+part_color = (0,150,0)
 # How much the color decreases over time
 part_color_reduction_rate = 5
 # Size of the parts
@@ -179,13 +181,15 @@ class SnakeManager:
         for part_pos in self.part_list:
             screen_pos = grid_to_screen_pos(part_pos)
             part = pygame.Rect(screen_pos.x, screen_pos.y, snake_part_render_size, snake_part_render_size)
-            new_color = (part_color[0], part_color[1] , part_color[2])
+            t = self.part_list.index(part_pos) / (len(self.part_list) - 1)
+            new_color = (part_color[0], int(part_color[1]* (1-t)) +105, part_color[2])
             pygame.draw.rect(screen, new_color, part)
 
     def render_food(self, screen: pygame.Surface):
         screen_pos = grid_to_screen_pos(self.food)
         food = pygame.Rect(screen_pos.x, screen_pos.y, food_render_size, food_render_size)
         pygame.draw.rect(screen, food_color, food)
+
 
 
 
