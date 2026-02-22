@@ -99,22 +99,20 @@ class SnakeManager:
     def init_parts(self):
         """Init all parts and the first food"""
         # Init first part
-        self.part_list.append(SnakePart(self.part_list))
-        self.part_list[0].pos = self.start_pos
+        self.part_list.append(self.start_pos) # First part
         # Init the other parts
         for i in range(self.n_starting_parts-1):
-            self.part_list.append(SnakePart(self.part_list))
-            self.part_list[i + 1].pos = Vector2D(self.start_pos.x +  ((i+1) * self.start_direction.x*-1),
-                                                 self.start_pos.y + ((i+1) * self.start_direction.y*-1))
+            self.part_list.append(Vector2D(self.start_pos.x +  ((i+1) * self.start_direction.x*-1),
+                                           self.start_pos.y + ((i+1) * self.start_direction.y*-1)))
         # Init food
         self.food = self.init_food()
 
     def move_step(self):
-        # Move each part to the position of the part before
+        # Move each part to the position of the part before, but not the first one
         for i in range(len(self.part_list),1,-1):
-            self.part_list[i-1].move_to_pre_part()
+            self.part_list[i-1] = self.part_list[i-2]
         # Move the first part
-        self.part_list[0].move_to_direction(self.direction)
+        self.part_list[0] += self.direction
         self.is_dir_changing = False
 
         ### Check Collisions ##
@@ -129,7 +127,7 @@ class SnakeManager:
 
     def check_food_collision(self):
         """Adds a Part if head collides with food and init a new food"""
-        if self.part_list[0].pos == self.food.pos:
+        if self.part_list[0] == self.food.pos:
             self.add_part()
             self.food = self.init_food()
 
@@ -139,25 +137,25 @@ class SnakeManager:
         spawn_pos = Vector2D(randint(0,Grid.cell_count-1), randint(0,Grid.cell_count-1))
         food = Food(spawn_pos)
         # If it collides with a part it will try again
-        while self.check_other_part_collision(food):
+        while self.check_other_part_collision(food.pos):
             spawn_pos = Vector2D(randint(0, Grid.cell_count-1), randint(0, Grid.cell_count-1))
             food = Food(spawn_pos)
         return food
 
     def add_part(self):
         """Init a new part in the next tick"""
-        self.part_list.append(SnakePart(self.part_list))
+        self.part_list.append(self.part_list[len(self.part_list)-1])
 
-    def check_other_part_collision(self, object: SnakePart | Food):
+    def check_other_part_collision(self, obj_pos: Vector2D) -> bool:
         """Returns True if the object collides with any other part of the snake."""
-        for part in self.part_list:
-            if part.pos == object.pos and part != object:
+        for i in range(1,len(self.part_list)):
+            if self.part_list[i] == obj_pos:
                 return True
         return False
 
     def check_border_collision(self):
-        x = self.part_list[0].pos.x
-        y = self.part_list[0].pos.y
+        x = self.part_list[0].x
+        y = self.part_list[0].y
         if  x > Grid.cell_count-1 or x < 0 :
             self.game_over()
         if y > Grid.cell_count-1 or y < 0 :
@@ -187,12 +185,17 @@ class SnakeManager:
 
     def render_objects(self, screen: pygame.Surface):
         # Render all parts
-        for part in self.part_list:
-            if part.pos:
-                part.render(screen)
+        self.render_parts(screen)
         # Render food
-            self.food.render(screen)
+        self.food.render(screen)
 
+    def render_parts(self, screen: pygame.Surface):
+        """Render all snake parts"""
+        for part_pos in self.part_list:
+            screen_pos = grid_to_screen_pos(part_pos)
+            part = pygame.Rect(screen_pos.x, screen_pos.y, snake_part_render_size, snake_part_render_size)
+            new_color = (part_color[0], part_color[1] , part_color[2])
+            pygame.draw.rect(screen, new_color, part)
 
 
 
