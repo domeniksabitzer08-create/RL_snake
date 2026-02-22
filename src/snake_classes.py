@@ -17,19 +17,26 @@ class Vector2D:
             # Vector + Vector
             if isinstance(other, Vector2D):
                 return Vector2D(self.x + other.x, self.y + other.y)
+            else:
+                return NotImplemented
         def __sub__(self, other):
             # Vector - Vector
             if isinstance(other, Vector2D):
                 return Vector2D(self.x - other.x, self.y - other.y)
+            else:
+                return NotImplemented
         def __mul__(self, other):
             if isinstance(other, (int, float)):
                 # Vector * Number
                 return Vector2D(self.x * other, self.y * other)
+            else:
+                return NotImplemented
         def __truediv__(self, other):
             # Vector / Number
             if isinstance(other, (int, float)):
                 return Vector2D(self.x / other, self.y / other)
-
+            else:
+                return NotImplemented
 
 # Vector directions
 Vector2D.left = Vector2D(-1, 0)
@@ -69,16 +76,6 @@ snake_part_render_size = 25
 food_color = (255,0,0)
 food_render_size = 30
 
-
-
-class Food:
-    def __init__(self, pos: Vector2D):
-        self.pos = pos
-    def render(self, screen: pygame.Surface):
-        screen_pos = grid_to_screen_pos(self.pos)
-        food = pygame.Rect(screen_pos.x, screen_pos.y, food_render_size, food_render_size)
-        pygame.draw.rect(screen, food_color, food)
-
 class SnakeManager:
     """Manages spawning and moving of the parts"""
     def __init__(self, start_pos: Vector2D, start_direction: Vector2D, n_starting_parts: int):
@@ -94,7 +91,6 @@ class SnakeManager:
         self.init_parts()
         # Other
         self.is_game_over = False
-
 
     def init_parts(self):
         """Init all parts and the first food"""
@@ -127,20 +123,18 @@ class SnakeManager:
 
     def check_food_collision(self):
         """Adds a Part if head collides with food and init a new food"""
-        if self.part_list[0] == self.food.pos:
+        if self.part_list[0] == self.food:
             self.add_part()
             self.food = self.init_food()
 
-    def init_food(self) -> Food:
+    def init_food(self) -> Vector2D:
         """Init on a random pos and returns the food object"""
         # Create one instance of Food on rnd pos
         spawn_pos = Vector2D(randint(0,Grid.cell_count-1), randint(0,Grid.cell_count-1))
-        food = Food(spawn_pos)
         # If it collides with a part it will try again
-        while self.check_other_part_collision(food.pos):
+        while self.check_other_part_collision(spawn_pos):
             spawn_pos = Vector2D(randint(0, Grid.cell_count-1), randint(0, Grid.cell_count-1))
-            food = Food(spawn_pos)
-        return food
+        return spawn_pos
 
     def add_part(self):
         """Init a new part in the next tick"""
@@ -166,8 +160,6 @@ class SnakeManager:
             self.is_dir_changing = True
             self.direction = new_direction
 
-
-
     def game_over(self):
         print("Game Over")
         self.is_game_over = True
@@ -187,7 +179,7 @@ class SnakeManager:
         # Render all parts
         self.render_parts(screen)
         # Render food
-        self.food.render(screen)
+        self.render_food(screen)
 
     def render_parts(self, screen: pygame.Surface):
         """Render all snake parts"""
@@ -197,6 +189,10 @@ class SnakeManager:
             new_color = (part_color[0], part_color[1] , part_color[2])
             pygame.draw.rect(screen, new_color, part)
 
+    def render_food(self, screen: pygame.Surface):
+        screen_pos = grid_to_screen_pos(self.food)
+        food = pygame.Rect(screen_pos.x, screen_pos.y, food_render_size, food_render_size)
+        pygame.draw.rect(screen, food_color, food)
 
 
 
