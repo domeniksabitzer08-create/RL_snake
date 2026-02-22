@@ -1,5 +1,6 @@
-from operator import index
+from idlelib.configdialog import changes
 
+import numpy as np
 import pygame
 from dataclasses import dataclass
 from random import randint
@@ -73,6 +74,11 @@ snake_part_render_size = 25
 food_color = (255,0,0)
 food_render_size = 30
 
+### REINFORCEMENT LEARNING VARIABLES ###
+NOTHING_REWARD = 0
+EAT_FOOD_REWARD = 10
+GAME_OVER_REWARD = -10
+
 class SnakeManager:
     """Manages spawning and moving of the parts"""
     def __init__(self, start_pos: Vector2D, start_direction: Vector2D, n_starting_parts: int):
@@ -86,8 +92,11 @@ class SnakeManager:
         # Food
         self.food = None
         self.init_parts()
+        # Reinforcement Learning
+        self.reward = 0
         # Other
         self.is_game_over = False
+
 
     def init_parts(self):
         """Init all parts and the first food"""
@@ -102,15 +111,21 @@ class SnakeManager:
 
     def step(self, action):
         # 1. action - left - right - straight - DONE
-        # 2. calculate and return state
-        # 3. calculate and return reward
+        # 2. calculate and return reward - DONE
+        # 3. calculate and return state
 
+        self.reward = NOTHING_REWARD
         # Move each part to the position of the part before, but not the first one
         for i in range(len(self.part_list),1,-1):
             self.part_list[i-1] = self.part_list[i-2]
         # Move the first part
         self.part_list[0] += self.direction
         self.is_dir_changing = False
+
+        ### RL ONLY ###
+        # get the state
+        state = self.get_full_grid_state()
+        self.change_direction(action)
 
         ### Check Collisions ##
         # Check if head collides with food
@@ -121,9 +136,13 @@ class SnakeManager:
         # Check if snake head collides with border
         self.check_border_collision()
 
+        return state, self.reward, self.is_game_over
+
+
     def check_food_collision(self):
         """Adds a Part if head collides with food and init a new food"""
         if self.part_list[0] == self.food:
+            self.reward = EAT_FOOD_REWARD
             self.add_part()
             self.food = self.init_food()
 
@@ -178,9 +197,30 @@ class SnakeManager:
         self.direction = clockwise_dir[new_idx]
 
     def game_over(self):
+        self.reward = GAME_OVER_REWARD
         print("Game Over")
         self.is_game_over = True
 
+    # only for RL
+    def get_full_grid_state(self):
+        # State look like this: [0,1,2,2,0,3]
+        empty = 0
+        part = 1
+        head = 2
+        food = 3
+        # Make state full of zeros
+        state = np.zeros((Grid.cell_count, Grid.cell_count))
+        # assign the values of the grid
+        # part and head
+        for part_pos in self.part_list:
+            state[part_pos.x][part_pos.y] = part
+            # if first part use 2
+            if part_pos == self.part_list[0]:
+                state[part_pos.x][part_pos.y] = head
+        # food
+        state[self.food.x][self.food.y] = food
+
+        return state
 
     def render_objects(self, screen: pygame.Surface):
         # Render all parts

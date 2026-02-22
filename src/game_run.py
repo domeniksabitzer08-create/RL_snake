@@ -23,7 +23,7 @@ def reset():
 clock = pygame.time.Clock()
 current_time = pygame.time.get_ticks()
 last_update = 0
-update_interval = 250
+update_interval = 600
 
 # Vector directions
 Vector2D.left = Vector2D(-1, 0)
@@ -35,15 +35,23 @@ Vector2D.down = Vector2D(0, 1)
 snake = snake_classes.SnakeManager(Vector2D(3,4),Vector2D.right, 3)
 
 ### UPDATE LOOP ###
+
+# Look at state
+state, reward, is_game_over = snake.step([1, 0, 0])
+print(state)
+print(f"Pos (4,4): {state[4,4]}")
+print(f"Pos (3,4): {state[3,4]}")
+
 while True:
     screen.fill((0, 0, 0))
     show_grid()
     # Call move_step depending on the update_interval
     current_time = pygame.time.get_ticks()
     if current_time - last_update >= update_interval:
-        snake.move_step()
         last_update = current_time
-    snake.handle_input()
+
+
+
     # Manage game over
     if snake.is_game_over:
         reset()
