@@ -100,7 +100,11 @@ class SnakeManager:
         # Init food
         self.food = self.init_food()
 
-    def move_step(self):
+    def step(self, action):
+        # 1. action - left - right - straight - DONE
+        # 2. calculate and return state
+        # 3. calculate and return reward
+
         # Move each part to the position of the part before, but not the first one
         for i in range(len(self.part_list),1,-1):
             self.part_list[i-1] = self.part_list[i-2]
@@ -151,24 +155,32 @@ class SnakeManager:
         if y > Grid.cell_count-1 or y < 0 :
             self.game_over()
 
-    def change_direction(self, new_direction: Vector2D):
-        if not (new_direction*-1) == self.direction and not self.is_dir_changing:
-            self.is_dir_changing = True
-            self.direction = new_direction
+    def change_direction(self, action):
+        # [1,0,0] -> left
+        # [0,1,0] -> straight
+        # [0,0,1] -> right
+        clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
+        idx = clockwise_dir.index(self.direction) # the direction as index in clockwise array
+        # 1. Make a left turn
+        if action == [1,0,0]:
+            new_idx = idx-1
+            if new_idx == -1:
+                new_idx = 3
+        # 2. Stay straight
+        elif action == [0,1,0]:
+            new_idx = idx
+        # 3. Make a right turn
+        else:
+            new_idx = idx+1
+            if new_idx == 4:
+                new_idx = 0
+        # Set the new direction depending on the action
+        self.direction = clockwise_dir[new_idx]
 
     def game_over(self):
         print("Game Over")
         self.is_game_over = True
 
-    def handle_input(self):
-        if pygame.key.get_pressed()[pygame.K_w]:
-            self.change_direction(Vector2D.up)
-        elif pygame.key.get_pressed()[pygame.K_s]:
-            self.change_direction(Vector2D.down)
-        elif pygame.key.get_pressed()[pygame.K_d]:
-            self.change_direction(Vector2D.right)
-        elif pygame.key.get_pressed()[pygame.K_a]:
-            self.change_direction(Vector2D.left)
 
     def render_objects(self, screen: pygame.Surface):
         # Render all parts
