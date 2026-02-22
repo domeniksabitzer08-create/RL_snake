@@ -1,11 +1,6 @@
-
-
 import pygame
 from dataclasses import dataclass
 from random import randint
-
-
-
 
 ### VECTOR CLASS ###
 
@@ -120,7 +115,6 @@ class SnakeManager:
         # Check if snake head collides with border
         self.check_border_collision()
 
-
     def check_food_collision(self):
         """Adds a Part if head collides with food and init a new food"""
         if self.part_list[0] == self.food:
@@ -173,7 +167,6 @@ class SnakeManager:
             self.change_direction(Vector2D.right)
         elif pygame.key.get_pressed()[pygame.K_a]:
             self.change_direction(Vector2D.left)
-
 
     def render_objects(self, screen: pygame.Surface):
         # Render all parts
