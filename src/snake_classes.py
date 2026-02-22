@@ -1,11 +1,10 @@
-from types import NoneType
+
 
 import pygame
 from dataclasses import dataclass
-import time
 from random import randint
 
-from PIL.ImageChops import screen
+
 
 
 ### VECTOR CLASS ###
@@ -70,31 +69,7 @@ snake_part_render_size = 25
 food_color = (255,0,0)
 food_render_size = 30
 
-class SnakePart:
-    def __init__(self, part_list: iter):
-        self.index = len(part_list)
-        # If the part is the first part, there is no pre_part
-        if not self.index == 0:
-            self.pre_part = part_list[self.index-1]
-        else:
-            self.pre_part = None
-        self.pos = None
-    # Movement functions
-    def move_to_direction(self, direction: Vector2D):
-        """Moves the part in a certain direction."""
-        self.pos += direction
 
-    def move_to_pre_part(self):
-        """Moves to the grid position of the predecessor."""
-        self.pos = self.pre_part.pos
-
-
-    # Render functions
-    def render(self, screen: pygame.Surface):
-        screen_pos = grid_to_screen_pos(self.pos)
-        part = pygame.Rect(screen_pos.x, screen_pos.y, snake_part_render_size, snake_part_render_size)
-        new_color = (part_color[0], part_color[1] -self.index * part_color_reduction_rate, part_color[2])
-        pygame.draw.rect(screen, new_color, part)
 
 class Food:
     def __init__(self, pos: Vector2D):
