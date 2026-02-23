@@ -81,7 +81,7 @@ GAME_OVER_REWARD = -10
 
 class SnakeManager:
     """Manages spawning and moving of the parts"""
-    def __init__(self, start_pos: Vector2D, start_direction: Vector2D, n_starting_parts: int):
+    def __init__(self, start_pos: Vector2D, start_direction: Vector2D, n_starting_parts: int, render: bool = True):
         # Snake
         self.start_pos = start_pos
         self.start_direction = start_direction
@@ -96,6 +96,14 @@ class SnakeManager:
         self.reward = 0
         # Other
         self.is_game_over = False
+        self.render = render
+        self.score = 0
+
+        # Setup PyGame if it needs to be rendered
+        if render:
+            pygame.init()
+            self.screen = pygame.display.set_mode((500, 500))
+
 
 
     def init_parts(self):
@@ -110,9 +118,11 @@ class SnakeManager:
         self.food = self.init_food()
 
     def step(self, action):
-        # 1. action - left - right - straight - DONE
-        # 2. calculate and return reward - DONE
-        # 3. calculate and return state
+
+        # render if necessary
+        if self.render:
+            self.render_objects(self.screen)
+            pygame.display.update()
 
         self.reward = NOTHING_REWARD
         # Move each part to the position of the part before, but not the first one
@@ -136,7 +146,9 @@ class SnakeManager:
         # Check if snake head collides with border
         self.check_border_collision()
 
-        return state, self.reward, self.is_game_over
+        self.score = len(self.part_list) - self.n_starting_parts
+
+        return state, self.reward, self.is_game_over, self.score
 
 
     def check_food_collision(self):
@@ -209,7 +221,7 @@ class SnakeManager:
         head = 2
         food = 3
         # Make state full of zeros
-        state = np.zeros((Grid.cell_count, Grid.cell_count))
+        state = np.zeros((Grid.cell_count+1, Grid.cell_count+1))
         # assign the values of the grid
         # part and head
         for part_pos in self.part_list:
@@ -223,6 +235,7 @@ class SnakeManager:
         return state
 
     def render_objects(self, screen: pygame.Surface):
+        screen.fill((0,0,0))
         # Render all parts
         self.render_parts(screen)
         # Render food
