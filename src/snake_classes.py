@@ -214,25 +214,9 @@ class SnakeManager:
         self.is_game_over = True
 
     # only for RL
-    def get_full_grid_state(self):
-        # State look like this: [0,1,2,2,0,3]
-        empty = 0
-        part = 1
-        head = 2
-        food = 3
-        # Make state full of zeros
-        state = np.zeros((Grid.cell_count+1, Grid.cell_count+1))
-        # assign the values of the grid
-        # part and head
-        for part_pos in self.part_list:
-            state[part_pos.x][part_pos.y] = part
-            # if first part use 2
-            if part_pos == self.part_list[0]:
-                state[part_pos.x][part_pos.y] = head
-        # food
-        state[self.food.x][self.food.y] = food
-
-        return state
+    def get_state(self):
+        # create array danger[0,0,1] then get idx and this for every state
+        pass
 
     def render_objects(self, screen: pygame.Surface):
         screen.fill((0,0,0))

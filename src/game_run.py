@@ -49,9 +49,6 @@ while True:
     current_time = pygame.time.get_ticks()
     if current_time - last_update >= update_interval:
         last_update = current_time
-
-
-
     # Manage game over
     if snake.is_game_over:
         reset()
