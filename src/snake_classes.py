@@ -5,6 +5,9 @@ import pygame
 from dataclasses import dataclass
 from random import randint
 
+from matplotlib.style.core import available
+
+
 ### VECTOR CLASS ###
 
 @dataclass(frozen=True)
@@ -89,6 +92,8 @@ class SnakeManager:
         self.part_list = []
         self.direction = start_direction
         self.is_dir_changing = False
+        # available directions      ----right-----------down----------left----------up------
+        self.available_directions = [Vector2D(1,0),Vector2D(0,1),Vector2D(-1,0),Vector2D(0,1)]
         # Food
         self.food = None
         self.init_parts()
@@ -134,7 +139,7 @@ class SnakeManager:
 
         ### RL ONLY ###
         # get the state
-        state = self.get_full_grid_state()
+        state = self.get_state()
         self.change_direction(action)
 
         ### Check Collisions ##
@@ -144,7 +149,7 @@ class SnakeManager:
         if self.check_other_part_collision(self.part_list[0]):
             self.game_over()
         # Check if snake head collides with border
-        self.check_border_collision()
+        self.check_border_collision(self.part_list[0])
 
         self.score = len(self.part_list) - self.n_starting_parts
 
@@ -178,13 +183,16 @@ class SnakeManager:
                 return True
         return False
 
-    def check_border_collision(self):
-        x = self.part_list[0].x
-        y = self.part_list[0].y
+    def check_border_collision(self, part_pos: Vector2D ) -> bool:
+        """returns true if pos is outside the border"""
+        x = part_pos.x
+        y = part_pos.y
         if  x > Grid.cell_count-1 or x < 0 :
-            self.game_over()
+            return True
         if y > Grid.cell_count-1 or y < 0 :
-            self.game_over()
+            return True
+        else:
+            return False
 
     def change_direction(self, action):
         # [1,0,0] -> left
@@ -216,7 +224,21 @@ class SnakeManager:
     # only for RL
     def get_state(self):
         # create array danger[0,0,1] then get idx and this for every state
+
         pass
+    def get_danger(self, state):
+        # Ich hab keine Ahung was zum fick ich hier gemacht habe
+        clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
+        danger = [0,0,0]
+        for dir in self.available_directions:
+            if dir != self.direction:
+                new_pos = state + dir
+                if self.check_other_part_collision(new_pos):
+
+
+
+
+
 
     def render_objects(self, screen: pygame.Surface):
         screen.fill((0,0,0))
