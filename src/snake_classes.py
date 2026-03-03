@@ -223,10 +223,14 @@ class SnakeManager:
 
     # only for RL
     def get_state(self):
+        clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
         # create array danger[0,0,1] then get idx and this for every state
         danger = self.get_danger(self.part_list[0])
+        # get direction as int
+        direction = clockwise_dir.index(self.direction)
+        food_dir = self.get_food_dir()
+        print(f"danger: {danger} | direction: {direction} | food_dir: {food_dir}")
 
-        pass
     def get_danger(self, state_pos):
         # Danger [Left, Front, Right]
         clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
@@ -250,14 +254,43 @@ class SnakeManager:
         right = state_pos + right_dir
 
         # Check in front
-        if self.check_other_part_collision(front):
+        if self.check_border_collision(front):
             danger[1] = 1
-        if self.check_other_part_collision(left):
+        else:
+            danger[1] = 0
+        # Check left
+        if self.check_border_collision(left):
             danger[0] = 1
-        if self.check_other_part_collision(right):
+        else:
+            danger[0] = 0
+        # Check right
+        if self.check_border_collision(right):
             danger[2] = 1
+        else:
+            danger[2] = 0
+
         return danger
 
+    def get_food_dir(self):
+        food = self.food
+        head = self.part_list[0]
+        food_dir = food - head
+        if abs(food_dir.x) > abs(food_dir.y):
+            if food_dir.x > 0:
+                final_dir = Vector2D.right
+            else:
+                final_dir = Vector2D.left
+        else:
+            if food_dir.y > 0:
+                final_dir = Vector2D.down
+            else:
+                final_dir = Vector2D.up
+        # Now relative to current direction
+        clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
+        idx = clockwise_dir.index(self.direction)
+        food_idx = clockwise_dir.index(final_dir)
+        relative_idx = food_idx + idx
+        return final_dir
 
 
 
@@ -267,15 +300,17 @@ class SnakeManager:
 
 
 
-
-
-
+                                        ### RENDERING ###
+    #-------------------------------------------------------------------------------------------------------#
     def render_objects(self, screen: pygame.Surface):
         screen.fill((0,0,0))
+        # show the grid
+        self.show_grid(screen)
         # Render all parts
         self.render_parts(screen)
         # Render food
         self.render_food(screen)
+
 
     def render_parts(self, screen: pygame.Surface):
         """Render all snake parts"""
@@ -291,6 +326,11 @@ class SnakeManager:
         food = pygame.Rect(screen_pos.x, screen_pos.y, food_render_size, food_render_size)
         pygame.draw.rect(screen, food_color, food)
 
-
+    def show_grid(self, screen: pygame.Surface):
+        for i in range(Grid.cell_count):
+            for j in range(Grid.cell_count):
+                cell = pygame.Rect((i * Grid.cell_size) + Grid.start_pos.x, (j * Grid.cell_size) + Grid.start_pos.y,
+                                   Grid.cell_render_width, Grid.cell_render_width)
+                pygame.draw.rect(screen, (200, 0, 0), cell)
 
 

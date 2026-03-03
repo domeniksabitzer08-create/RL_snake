@@ -24,7 +24,7 @@ score = 100
 
 
 def train():
-s
+ pass
 
 if __name__ == '__main__':
     train()

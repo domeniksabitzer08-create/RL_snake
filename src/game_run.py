@@ -7,12 +7,7 @@ pygame.init()
 screen = pygame.display.set_mode((500, 500))
 
 
-### DEBUG FUNCTIONS ###
-def show_grid():
-    for i in range(Grid.cell_count):
-        for j in range(Grid.cell_count):
-            cell = pygame.Rect((i * Grid.cell_size)+Grid.start_pos.x, (j* Grid.cell_size)+Grid.start_pos.y, Grid.cell_render_width, Grid.cell_render_width)
-            pygame.draw.rect(screen, (200,0,0), cell)
+
 
 ### GAME FUNCTIONS ###
 def reset():
@@ -32,19 +27,14 @@ Vector2D.up = Vector2D(0, -1)
 Vector2D.down = Vector2D(0, 1)
 
 ### Start Game Logic ###
-snake = snake_classes.SnakeManager(Vector2D(3,4),Vector2D.right, 3)
+snake = snake_classes.SnakeManager(Vector2D(0,0),Vector2D.right, 3)
 
 ### UPDATE LOOP ###
 
-# Look at state
-state, reward, is_game_over = snake.step([1, 0, 0])
-print(state)
-print(f"Pos (4,4): {state[4,4]}")
-print(f"Pos (3,4): {state[3,4]}")
+snake.step([0,0,1])
 
 while True:
-    screen.fill((0, 0, 0))
-    show_grid()
+
     # Call move_step depending on the update_interval
     current_time = pygame.time.get_ticks()
     if current_time - last_update >= update_interval:
@@ -61,3 +51,4 @@ while True:
             pygame.quit()
 
     pygame.display.update()
+
