@@ -224,16 +224,46 @@ class SnakeManager:
     # only for RL
     def get_state(self):
         # create array danger[0,0,1] then get idx and this for every state
+        danger = self.get_danger(self.part_list[0])
 
         pass
-    def get_danger(self, state):
-        # Ich hab keine Ahung was zum fick ich hier gemacht habe
+    def get_danger(self, state_pos):
+        # Danger [Left, Front, Right]
         clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
         danger = [0,0,0]
-        for dir in self.available_directions:
-            if dir != self.direction:
-                new_pos = state + dir
-                if self.check_other_part_collision(new_pos):
+
+        front_idx = clockwise_dir.index(self.direction)
+        front_dir = clockwise_dir[front_idx]
+        front = state_pos + front_dir
+
+        left_idx = front_idx -1
+        # if the idx is -1, then the next direction would be up (idx=3)
+        if left_idx == -1:
+            left_idx = 3
+        left_dir = clockwise_dir[left_idx]
+        left = state_pos + left_dir
+
+        right_idx = front_idx + 1
+        if right_idx == 4:
+            right_idx = 0
+        right_dir = clockwise_dir[right_idx]
+        right = state_pos + right_dir
+
+        # Check in front
+        if self.check_other_part_collision(front):
+            danger[1] = 1
+        if self.check_other_part_collision(left):
+            danger[0] = 1
+        if self.check_other_part_collision(right):
+            danger[2] = 1
+        return danger
+
+
+
+
+
+
+
 
 
 
