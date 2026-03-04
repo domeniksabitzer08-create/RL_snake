@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import snake_classes
 from snake_classes import *
@@ -31,10 +33,12 @@ snake = snake_classes.SnakeManager(Vector2D(0,0),Vector2D.right, 3)
 
 ### UPDATE LOOP ###
 
-snake.step([0,0,1])
-
+state, reward, is_game_over, score = snake.step([0,0,1])
+print(f"current state: {state}")
 while True:
-
+    time.sleep(4)
+    state = snake.reset()
+    time.sleep(10)
     # Call move_step depending on the update_interval
     current_time = pygame.time.get_ticks()
     if current_time - last_update >= update_interval:

@@ -1,3 +1,4 @@
+import math
 from idlelib.configdialog import changes
 
 import numpy as np
@@ -6,6 +7,7 @@ from dataclasses import dataclass
 from random import randint
 
 from matplotlib.style.core import available
+from numpy.random import get_state
 
 
 ### VECTOR CLASS ###
@@ -47,7 +49,7 @@ Vector2D.down = Vector2D(0, 1)
 
 class Grid:
     start_pos = Vector2D(100, 100)
-    cell_count = 10
+    cell_count = 5
     cell_size = 30
     cell_render_width = 10
 
@@ -78,7 +80,7 @@ food_color = (255,0,0)
 food_render_size = 30
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = 0
+NOTHING_REWARD = -0.1
 EAT_FOOD_REWARD = 10
 GAME_OVER_REWARD = -10
 
@@ -88,6 +90,7 @@ class SnakeManager:
         # Snake
         self.start_pos = start_pos
         self.start_direction = start_direction
+        self.start_direction = start_direction
         self.n_starting_parts = n_starting_parts
         self.part_list = []
         self.direction = start_direction
@@ -96,9 +99,11 @@ class SnakeManager:
         self.available_directions = [Vector2D(1,0),Vector2D(0,1),Vector2D(-1,0),Vector2D(0,1)]
         # Food
         self.food = None
+        # init parts
         self.init_parts()
         # Reinforcement Learning
         self.reward = 0
+        #self.observation_space
         # Other
         self.is_game_over = False
         self.render = render
@@ -113,6 +118,7 @@ class SnakeManager:
 
     def init_parts(self):
         """Init all parts and the first food"""
+        self.part_list = []
         # Init first part
         self.part_list.append(self.start_pos) # First part
         # Init the other parts
@@ -122,8 +128,26 @@ class SnakeManager:
         # Init food
         self.food = self.init_food()
 
-    def step(self, action):
+    def reset(self):
+        # Snake
+        self.part_list = []
+        self.direction = self.start_direction
+        self.is_dir_changing = False
+        # Food
+        self.food = None
+        # init parts
+        self.init_parts()
+        # Reinforcement Learning
+        self.reward = 0
+        # Other
+        self.is_game_over = False
+        self.score = 0
 
+        self.init_parts()
+        state = self.get_state()
+        return state
+
+    def step(self, action):
         # render if necessary
         if self.render:
             self.render_objects(self.screen)
@@ -149,7 +173,8 @@ class SnakeManager:
         if self.check_other_part_collision(self.part_list[0]):
             self.game_over()
         # Check if snake head collides with border
-        self.check_border_collision(self.part_list[0])
+        if self.check_border_collision(self.part_list[0]):
+            self.game_over()
 
         self.score = len(self.part_list) - self.n_starting_parts
 
@@ -195,18 +220,18 @@ class SnakeManager:
             return False
 
     def change_direction(self, action):
-        # [1,0,0] -> left
-        # [0,1,0] -> straight
-        # [0,0,1] -> right
+        # 0 -> left
+        # 1 -> straight
+        # 2 -> right
         clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
         idx = clockwise_dir.index(self.direction) # the direction as index in clockwise array
         # 1. Make a left turn
-        if action == [1,0,0]:
+        if action == 0:
             new_idx = idx-1
             if new_idx == -1:
                 new_idx = 3
         # 2. Stay straight
-        elif action == [0,1,0]:
+        elif action == 1:
             new_idx = idx
         # 3. Make a right turn
         else:
@@ -221,15 +246,30 @@ class SnakeManager:
         print("Game Over")
         self.is_game_over = True
 
+    def sample(self):
+        """returns a random action"""
+        return randint(0, 2)
+
+
     # only for RL
     def get_state(self):
+        """
+        returns the current state.
+        """
         clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
         # create array danger[0,0,1] then get idx and this for every state
         danger = self.get_danger(self.part_list[0])
         # get direction as int
-        direction = clockwise_dir.index(self.direction)
+        direction_idx = clockwise_dir.index(self.direction)
         food_dir = self.get_food_dir()
-        print(f"danger: {danger} | direction: {direction} | food_dir: {food_dir}")
+
+        danger_int = self.convert_to_int(danger)
+        food_dir_int = self.convert_to_int(food_dir)
+
+
+        # create state
+        state = (direction_idx * (8*16) + danger_int * 16 + food_dir_int)
+        return state
 
     def get_danger(self, state_pos):
         # Danger [Left, Front, Right]
@@ -254,17 +294,17 @@ class SnakeManager:
         right = state_pos + right_dir
 
         # Check in front
-        if self.check_border_collision(front):
+        if self.check_border_collision(front) or self.check_other_part_collision(front):
             danger[1] = 1
         else:
             danger[1] = 0
         # Check left
-        if self.check_border_collision(left):
+        if self.check_border_collision(left) or self.check_other_part_collision(left):
             danger[0] = 1
         else:
             danger[0] = 0
         # Check right
-        if self.check_border_collision(right):
+        if self.check_border_collision(right) or self.check_other_part_collision(right):
             danger[2] = 1
         else:
             danger[2] = 0
@@ -274,23 +314,38 @@ class SnakeManager:
     def get_food_dir(self):
         food = self.food
         head = self.part_list[0]
-        food_dir = food - head
-        if abs(food_dir.x) > abs(food_dir.y):
-            if food_dir.x > 0:
-                final_dir = Vector2D.right
-            else:
-                final_dir = Vector2D.left
-        else:
-            if food_dir.y > 0:
-                final_dir = Vector2D.down
-            else:
-                final_dir = Vector2D.up
-        # Now relative to current direction
-        clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
-        idx = clockwise_dir.index(self.direction)
-        food_idx = clockwise_dir.index(final_dir)
-        relative_idx = food_idx + idx
-        return final_dir
+        dx = food.x - head.x
+        dy = food.y - head.y
+        if self.direction == Vector2D.up:
+            food_left = dx < 0
+            food_right = dx > 0
+            food_front = dy < 0
+            food_back = dy > 0
+        elif self.direction == Vector2D.right:
+            food_left = dy < 0
+            food_right = dy > 0
+            food_front = dx > 0
+            food_back = dx < 0
+        elif self.direction == Vector2D.down:
+            food_left = dx > 0
+            food_right = dx < 0
+            food_front = dy > 0
+            food_back = dy < 0
+        elif self.direction == Vector2D.left:
+            food_left = dy > 0
+            food_right = dy < 0
+            food_front = dx < 0
+            food_back = dx > 0
+        return [food_left, food_front, food_back, food_right]
+
+    def convert_to_int(self, arr: list):
+        summe = 0
+        for i in range(len(arr)):
+            num = int(arr[i])
+            erg = (2 ** i) * num
+            summe += erg
+        return summe
+
 
 
 
