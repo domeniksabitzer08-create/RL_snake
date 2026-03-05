@@ -1,13 +1,8 @@
-import math
-from idlelib.configdialog import changes
 
-import numpy as np
 import pygame
 from dataclasses import dataclass
 from random import randint
 
-from matplotlib.style.core import available
-from numpy.random import get_state
 
 
 ### VECTOR CLASS ###
@@ -49,7 +44,7 @@ Vector2D.down = Vector2D(0, 1)
 
 class Grid:
     start_pos = Vector2D(100, 100)
-    cell_count = 5
+    cell_count = 10
     cell_size = 30
     cell_render_width = 10
 
@@ -80,13 +75,15 @@ food_color = (255,0,0)
 food_render_size = 30
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = -0.1
-EAT_FOOD_REWARD = 10
+NOTHING_REWARD = 0.1
+EAT_FOOD_REWARD = 20
 GAME_OVER_REWARD = -10
 
 class SnakeManager:
     """Manages spawning and moving of the parts"""
     def __init__(self, start_pos: Vector2D, start_direction: Vector2D, n_starting_parts: int, render: bool = True):
+        # rendering
+        self.render = render
         # Snake
         self.start_pos = start_pos
         self.start_direction = start_direction
@@ -96,7 +93,7 @@ class SnakeManager:
         self.direction = start_direction
         self.is_dir_changing = False
         # available directions      ----right-----------down----------left----------up------
-        self.available_directions = [Vector2D(1,0),Vector2D(0,1),Vector2D(-1,0),Vector2D(0,1)]
+        self.available_directions = [Vector2D(1,0),Vector2D(0,1),Vector2D(-1,0),Vector2D(0,-1)]
         # Food
         self.food = None
         # init parts
@@ -106,7 +103,7 @@ class SnakeManager:
         #self.observation_space
         # Other
         self.is_game_over = False
-        self.render = render
+
         self.score = 0
 
         # Setup PyGame if it needs to be rendered
@@ -152,7 +149,7 @@ class SnakeManager:
         if self.render:
             self.render_objects(self.screen)
             pygame.display.update()
-
+        self.change_direction(action)
         self.reward = NOTHING_REWARD
         # Move each part to the position of the part before, but not the first one
         for i in range(len(self.part_list),1,-1):
@@ -162,10 +159,9 @@ class SnakeManager:
         self.is_dir_changing = False
 
         ### RL ONLY ###
+
         # get the state
         state = self.get_state()
-        self.change_direction(action)
-
         ### Check Collisions ##
         # Check if head collides with food
         self.check_food_collision()
@@ -175,7 +171,6 @@ class SnakeManager:
         # Check if snake head collides with border
         if self.check_border_collision(self.part_list[0]):
             self.game_over()
-
         self.score = len(self.part_list) - self.n_starting_parts
 
         return state, self.reward, self.is_game_over, self.score
@@ -243,7 +238,6 @@ class SnakeManager:
 
     def game_over(self):
         self.reward = GAME_OVER_REWARD
-        print("Game Over")
         self.is_game_over = True
 
     def sample(self):
@@ -346,15 +340,6 @@ class SnakeManager:
             summe += erg
         return summe
 
-
-
-
-
-
-
-
-
-
                                         ### RENDERING ###
     #-------------------------------------------------------------------------------------------------------#
     def render_objects(self, screen: pygame.Surface):
@@ -387,5 +372,7 @@ class SnakeManager:
                 cell = pygame.Rect((i * Grid.cell_size) + Grid.start_pos.x, (j * Grid.cell_size) + Grid.start_pos.y,
                                    Grid.cell_render_width, Grid.cell_render_width)
                 pygame.draw.rect(screen, (200, 0, 0), cell)
+
+
 
 
