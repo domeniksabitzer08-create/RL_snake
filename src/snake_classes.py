@@ -75,8 +75,8 @@ food_color = (255,0,0)
 food_render_size = 30
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = 0.1
-EAT_FOOD_REWARD = 20
+NOTHING_REWARD = 0
+EAT_FOOD_REWARD = 10
 GAME_OVER_REWARD = -10
 
 class SnakeManager:

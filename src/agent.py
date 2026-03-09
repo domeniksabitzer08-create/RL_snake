@@ -16,7 +16,7 @@ Vector2D.up = Vector2D(0, -1)
 Vector2D.down = Vector2D(0, 1)
 
 # Game Enviroment
-Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=False)
+Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=True)
 
 score = 100
 # action
@@ -33,7 +33,7 @@ Gamma = 0.9
 Epsilon = 1
 Min_epsilon = 0.1
 Epsilon_decay = 0.999
-Num_episodes = 20000
+Num_episodes = 10000
 Max_steps = 300
 # test
 global TestEnv
@@ -75,6 +75,8 @@ def train(lr, gamma, epsilon, epsilon_decay, num_episodes, max_steps):
                 Train_score += score
                 Life_span += step +1
                 break
+            if i % 2000 == 0:
+                sleep(0.1)
         # 7. decrease epsilon
         epsilon = max(Min_epsilon, epsilon * epsilon_decay)
     avg_life_span = Life_span / num_episodes
