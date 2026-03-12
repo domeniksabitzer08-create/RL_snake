@@ -16,7 +16,7 @@ Vector2D.up = Vector2D(0, -1)
 Vector2D.down = Vector2D(0, 1)
 
 # Game Environment
-Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=True)
+Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=False)
 
 score = 100
 # action
@@ -39,7 +39,7 @@ Max_steps = 300
 global TestEnv
 #TestEnv = SnakeManager(Vector2D(2,2),Vector2D.right,3, render=True)
 global TestEpisodes
-TestEpisodes = 100
+TestEpisodes = 200
 # tracking
 Train_score = 0
 Life_span = 0
@@ -74,20 +74,21 @@ def train(lr, gamma, epsilon, epsilon_decay, num_episodes, max_steps):
             if is_game_over:
                 Train_score += score
                 Life_span += step +1
+                avg_life_span = Life_span / (i +1)
+                avg_train_score = Train_score / (i+1)
+                Env.ui_text = f"avg_life_span: {avg_life_span:.2f} | avg_train_score: {avg_train_score:.2f}"
                 break
             if i % 2000 == 0:
                 sleep(0.1)
         # 7. decrease epsilon
         epsilon = max(Min_epsilon, epsilon * epsilon_decay)
-    avg_life_span = Life_span / num_episodes
-    avg_train_score = Train_score / num_episodes
-    print(f"avg_life_span: {avg_life_span} | avg_train_score: {avg_train_score}")
+    print(f"avg_life_span: {avg_life_span:.2f} | avg_train_score: {avg_train_score:.2f}")
 
 def test():
     print("test")
     test_score = 0
     life_span = 0
-    env = SnakeManager(Vector2D(3,2),Vector2D.right,5, render=True)
+    env = SnakeManager(Vector2D(3,2),Vector2D.right,5, render=False)
     for i in range(TestEpisodes):
         state = env.reset()
         score = 0
@@ -95,13 +96,17 @@ def test():
         for step in range(200):
             action = choose_action(state,0)
             state, reward, is_game_over, score = env.step(action)
-            sleep(0.2)
+            if i > 100:
+                sleep(0.2)
+            if i == 100:
+                env = SnakeManager(Vector2D(3,2),Vector2D.right,5, render=True)
             if is_game_over:
                 test_score += score
                 life_span += step +1
+                avg_life_span = life_span / (i+1)
+                avg_test_score = test_score / (i+1)
+                env.ui_text = f"avg_life_span: {avg_life_span:.2f} | avg_test_score: {avg_test_score:.2f}"
                 break
-    avg_life_span = life_span / TestEpisodes
-    avg_test_score = test_score / TestEpisodes
     print(f"avg_life_span TEST: {avg_life_span} | avg_score TEST: {avg_test_score}")
 
 if __name__ == '__main__':

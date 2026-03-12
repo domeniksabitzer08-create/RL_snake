@@ -104,13 +104,13 @@ class SnakeManager:
         #self.observation_space
         # Other
         self.is_game_over = False
-
         self.score = 0
-
+        # UI
+        self.ui_text = ""
         # Setup PyGame if it needs to be rendered
         if render:
             pygame.init()
-            self.screen = pygame.display.set_mode((500, 500))
+            self.screen = pygame.display.set_mode((500, 700))
 
 
 
@@ -351,6 +351,8 @@ class SnakeManager:
         self.render_parts(screen)
         # Render food
         self.render_food(screen)
+        # Render UI
+        self.render_ui()
 
 
     def render_parts(self, screen: pygame.Surface):
@@ -366,11 +368,10 @@ class SnakeManager:
         screen_pos = grid_to_screen_pos(self.food)
         food = pygame.Rect(screen_pos.x + Grid.line_thickness/2, screen_pos.y + Grid.line_thickness/2, food_render_size, food_render_size)
         pygame.draw.rect(screen, food_color, food)
-
+    ### RENDER GRID ###
     def draw_grid(self, screen: pygame.Surface):
         self.draw_grid_line_ver(screen)
         self.draw_grid_line_hor(screen)
-
     def draw_grid_line_ver(self, screen: pygame.Surface):
         for i in range(Grid.cell_count+1):
             line = pygame.Rect(Grid.start_pos.x, Grid.start_pos.y + Grid.cell_size*i, Grid.cell_count*Grid.cell_size + Grid.line_thickness, Grid.line_thickness )
@@ -379,4 +380,9 @@ class SnakeManager:
         for i in range(Grid.cell_count+1):
             line = pygame.Rect(Grid.start_pos.x  + Grid.cell_size*i, Grid.start_pos.y,  Grid.line_thickness, Grid.cell_count*Grid.cell_size + Grid.line_thickness )
             pygame.draw.rect(screen, (150,150,150), line)
+    ### RENDER UI ###
+    def render_ui(self):
+        font = pygame.font.SysFont('Arial', 20)
+        label = font.render(self.ui_text, True, (255,255,255))
+        self.screen.blit(label, (50, 500))
 
