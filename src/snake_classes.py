@@ -47,6 +47,7 @@ class Grid:
     cell_count = 10
     cell_size = 30
     cell_render_width = 10
+    line_thickness = 4
 
 # Function to convert grid to screen and screen to grid pos
 def screen_to_grid_pos(pos: Vector2D):
@@ -68,11 +69,11 @@ part_color = (0,150,0)
 # How much the color decreases over time
 part_color_reduction_rate = 5
 # Size of the parts
-snake_part_render_size = 25
+snake_part_render_size = Grid.cell_size
 
 ### Food
 food_color = (255,0,0)
-food_render_size = 30
+food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
 NOTHING_REWARD = 0
@@ -345,7 +346,7 @@ class SnakeManager:
     def render_objects(self, screen: pygame.Surface):
         screen.fill((0,0,0))
         # show the grid
-        self.show_grid(screen)
+        self.draw_grid(screen)
         # Render all parts
         self.render_parts(screen)
         # Render food
@@ -363,16 +364,19 @@ class SnakeManager:
 
     def render_food(self, screen: pygame.Surface):
         screen_pos = grid_to_screen_pos(self.food)
-        food = pygame.Rect(screen_pos.x, screen_pos.y, food_render_size, food_render_size)
+        food = pygame.Rect(screen_pos.x + Grid.line_thickness/2, screen_pos.y + Grid.line_thickness/2, food_render_size, food_render_size)
         pygame.draw.rect(screen, food_color, food)
 
-    def show_grid(self, screen: pygame.Surface):
-        for i in range(Grid.cell_count):
-            for j in range(Grid.cell_count):
-                cell = pygame.Rect((i * Grid.cell_size) + Grid.start_pos.x, (j * Grid.cell_size) + Grid.start_pos.y,
-                                   Grid.cell_render_width, Grid.cell_render_width)
-                pygame.draw.rect(screen, (200, 0, 0), cell)
+    def draw_grid(self, screen: pygame.Surface):
+        self.draw_grid_line_ver(screen)
+        self.draw_grid_line_hor(screen)
 
-
-
+    def draw_grid_line_ver(self, screen: pygame.Surface):
+        for i in range(Grid.cell_count+1):
+            line = pygame.Rect(Grid.start_pos.x, Grid.start_pos.y + Grid.cell_size*i, Grid.cell_count*Grid.cell_size + Grid.line_thickness, Grid.line_thickness )
+            pygame.draw.rect(screen, (150,150,150), line)
+    def draw_grid_line_hor(self, screen: pygame.Surface):
+        for i in range(Grid.cell_count+1):
+            line = pygame.Rect(Grid.start_pos.x  + Grid.cell_size*i, Grid.start_pos.y,  Grid.line_thickness, Grid.cell_count*Grid.cell_size + Grid.line_thickness )
+            pygame.draw.rect(screen, (150,150,150), line)
 

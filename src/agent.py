@@ -15,7 +15,7 @@ Vector2D.right = Vector2D(1, 0)
 Vector2D.up = Vector2D(0, -1)
 Vector2D.down = Vector2D(0, 1)
 
-# Game Enviroment
+# Game Environment
 Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=True)
 
 score = 100
@@ -33,7 +33,7 @@ Gamma = 0.9
 Epsilon = 1
 Min_epsilon = 0.1
 Epsilon_decay = 0.999
-Num_episodes = 10000
+Num_episodes = 1000
 Max_steps = 300
 # test
 global TestEnv
