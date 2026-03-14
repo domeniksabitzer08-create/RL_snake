@@ -59,5 +59,12 @@ def test_model():
     y_pred = torch.argmax(torch.softmax(y_logit, dim=0))
     print(f"y_logit: {y_logit} | action: {y_pred}")
 
+def check_state():
+    env = SnakeManager(Vector2D(4, 2), Vector2D.right, 5, render=True)
+    while True:
+        state, reward, is_game_over, score = env.step([0,0,1])
+        if is_game_over:
+            break
+
 if __name__ == '__main__':
-    test_model()
+    check_state()

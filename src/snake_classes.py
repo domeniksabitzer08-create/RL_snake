@@ -249,21 +249,37 @@ class SnakeManager:
     # only for RL
     def get_state(self):
         """
-        returns the current state.
+        returns the current state in form of an array.
         """
+
+        state = []
+
         clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
-        # create array danger[0,0,1] then get idx and this for every state
+        # create array danger[0,0,1], appends them to the state
         danger = self.get_danger(self.part_list[0])
+        print(f"Danger (left|straight|right): {danger}")
+        state.append(danger)
+
         # get direction as int
         direction_idx = clockwise_dir.index(self.direction)
+        # converts int into array of four directions, appends to the state
+        direction = [0,0,0,0]
+        direction[direction_idx] = 1
+        print(f"Direction (right|down|left|up): {direction}")
+        state.append(direction)
+
+        # get the food direction as an array, appends to the state
         food_dir = self.get_food_dir()
+        print(f"Food direction (right|down|left|up): {food_dir}")
 
-        danger_int = self.convert_to_int(danger)
-        food_dir_int = self.convert_to_int(food_dir)
+        # turn the combination of arrays to one big array (flatten out)
+        state = [x for sub in state for x in sub]
 
+        # add the snake length to state, and divide it by the max len that the number is between 0-1
+        snake_length = len(self.part_list)/(Grid.cell_count*Grid.cell_count)
+        state.append(snake_length)
 
-        # create state
-        state = (direction_idx * (8*16) + danger_int * 16 + food_dir_int)
+        print(f"full flatten state: {state}")
         return state
 
     def get_danger(self, state_pos):
@@ -307,6 +323,7 @@ class SnakeManager:
         return danger
 
     def get_food_dir(self):
+        """returns the direction of the food as an array"""
         food = self.food
         head = self.part_list[0]
         dx = food.x - head.x
@@ -331,7 +348,7 @@ class SnakeManager:
             food_right = dy < 0
             food_front = dx < 0
             food_back = dx > 0
-        return [food_left, food_front, food_back, food_right]
+        return [int(food_left), int(food_front), int(food_back), int(food_right)]
 
     def convert_to_int(self, arr: list):
         summe = 0
