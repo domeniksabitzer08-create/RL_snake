@@ -1,8 +1,31 @@
 import random
 from time import sleep
 import numpy as np
+from torch.linalg import multi_dot
+
 from snake_classes import *
 from tqdm.auto import tqdm
+# importing PyTorch
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+
+
+class Model(nn.Module):
+    def __init__(self, in_features, out_features, hidden_units=8):
+        super().__init__()
+        self.layer_stack = nn.Sequential(
+            nn.Linear(in_features, hidden_units),
+            nn.ReLU(),
+            nn.Linear(hidden_units, hidden_units),
+            nn.ReLU(),
+            nn.Linear(hidden_units, hidden_units),
+            nn.ReLU(),
+            nn.Linear(hidden_units, out_features),
+        )
+    def forward(self, x):
+        return self.layer_stack(x)
+
 
 
 # Vector directions
@@ -12,16 +35,11 @@ Vector2D.up = Vector2D(0, -1)
 Vector2D.down = Vector2D(0, 1)
 
 # Game Environment
-Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=False)
+Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=True)
 
 score = 100
 # action
 N_actions = 3
-# state
-N_directions = 4
-N_danger = 8 # 3 bits
-N_food_dir = 16 # 4 bits
-Q_table = np.zeros((N_directions*N_danger*N_food_dir, N_actions))
 # hyperparameters
 # train
 Lr = 0.1
@@ -29,80 +47,17 @@ Gamma = 0.9
 Epsilon = 1
 Min_epsilon = 0.1
 Epsilon_decay = 0.999
-Num_episodes = 100000
+Num_episodes = 10000
 Max_steps = 300
-# test
-global TestEnv
-#TestEnv = SnakeManager(Vector2D(2,2),Vector2D.right,3, render=True)
-global TestEpisodes
-TestEpisodes = 200
-# tracking
-Train_score = 0
-Life_span = 0
 
-def choose_action(state, epsilon):
-    if random.uniform(0, 1) <= epsilon:
-        return Env.sample()
-    else:
-        return np.argmax(Q_table[state, :])
-
-def train(lr, gamma, epsilon, epsilon_decay, num_episodes, max_steps):
-    Life_span = 0
-    Train_score = 0
-    for i in tqdm(range(num_episodes)):
-        is_game_over = False
-        state = Env.reset()
-        reward = 0
-        for step in range(max_steps):
-            # 0. calculate an action
-            action = choose_action(state, epsilon)
-            # 1. get the next state, reward, if the game is over and the score
-            next_state, reward, is_game_over, score = Env.step(action)
-            # 2. get the old value
-            old_value = Q_table[state, action]
-            # 3. get the new value
-            next_value = np.max(Q_table[next_state])
-            # 4. update the Q_table
-            Q_table[state, action] = old_value + lr * (reward + gamma * next_value - old_value)
-            # 5. set the new state as the current state
-            state = next_state
-            # 6. check if the game is over
-            if is_game_over:
-                Train_score += score
-                Life_span += step +1
-                avg_life_span = Life_span / (i +1)
-                avg_train_score = Train_score / (i+1)
-                Env.ui_text = f"avg_life_span: {avg_life_span:.2f} | avg_train_score: {avg_train_score:.2f}"
-                break
-        # 7. decrease epsilon
-        epsilon = max(Min_epsilon, epsilon * epsilon_decay)
-    print(f"avg_life_span: {avg_life_span:.2f} | avg_train_score: {avg_train_score:.2f}")
-
-def test():
-    print("test")
-    test_score = 0
-    life_span = 0
-    env = SnakeManager(Vector2D(3,2),Vector2D.right,5, render=False)
-    for i in range(TestEpisodes):
-        state = env.reset()
-        score = 0
-        reward = 0
-        for step in range(200):
-            action = choose_action(state,0)
-            state, reward, is_game_over, score = env.step(action)
-            #if i > 100:
-                #sleep(0.2)
-            if i == 100:
-                env = SnakeManager(Vector2D(3,2),Vector2D.right,5, render=True)
-            if is_game_over:
-                test_score += score
-                life_span += step +1
-                avg_life_span = life_span / (i+1)
-                avg_test_score = test_score / (i+1)
-                env.ui_text = f"avg_life_span: {avg_life_span:.2f} | avg_test_score: {avg_test_score:.2f}"
-                break
-    print(f"avg_life_span TEST: {avg_life_span} | avg_score TEST: {avg_test_score}")
+def test_model():
+    # test data flow of model with dummy tensor
+    model = Model(10, 3)
+    dummy_tensor = torch.rand(10)
+    # send tensor through model
+    y_logit = model(dummy_tensor)
+    y_pred = torch.argmax(torch.softmax(y_logit, dim=0))
+    print(f"y_logit: {y_logit} | action: {y_pred}")
 
 if __name__ == '__main__':
-    train(Lr,Gamma, Epsilon, Epsilon_decay, Num_episodes, Max_steps)
-    test()
+    test_model()
