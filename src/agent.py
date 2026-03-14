@@ -1,12 +1,8 @@
 import random
-import time
-from random import randint
 from time import sleep
 import numpy as np
-from sympy.abc import epsilon
-
-import snake_classes
 from snake_classes import *
+from tqdm.auto import tqdm
 
 
 # Vector directions
@@ -33,7 +29,7 @@ Gamma = 0.9
 Epsilon = 1
 Min_epsilon = 0.1
 Epsilon_decay = 0.999
-Num_episodes = 1000
+Num_episodes = 100000
 Max_steps = 300
 # test
 global TestEnv
@@ -53,7 +49,7 @@ def choose_action(state, epsilon):
 def train(lr, gamma, epsilon, epsilon_decay, num_episodes, max_steps):
     Life_span = 0
     Train_score = 0
-    for i in range(num_episodes):
+    for i in tqdm(range(num_episodes)):
         is_game_over = False
         state = Env.reset()
         reward = 0
@@ -78,8 +74,6 @@ def train(lr, gamma, epsilon, epsilon_decay, num_episodes, max_steps):
                 avg_train_score = Train_score / (i+1)
                 Env.ui_text = f"avg_life_span: {avg_life_span:.2f} | avg_train_score: {avg_train_score:.2f}"
                 break
-            if i % 2000 == 0:
-                sleep(0.1)
         # 7. decrease epsilon
         epsilon = max(Min_epsilon, epsilon * epsilon_decay)
     print(f"avg_life_span: {avg_life_span:.2f} | avg_train_score: {avg_train_score:.2f}")
@@ -96,8 +90,8 @@ def test():
         for step in range(200):
             action = choose_action(state,0)
             state, reward, is_game_over, score = env.step(action)
-            if i > 100:
-                sleep(0.2)
+            #if i > 100:
+                #sleep(0.2)
             if i == 100:
                 env = SnakeManager(Vector2D(3,2),Vector2D.right,5, render=True)
             if is_game_over:
