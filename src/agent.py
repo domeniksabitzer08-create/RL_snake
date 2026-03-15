@@ -27,7 +27,7 @@ class Model(nn.Module):
     def forward(self, x):
         return self.layer_stack(x)
 
-class ExperienceReplay():
+class ExperienceReplay:
     def __init__(self, capacity, batch_size):
         self.capacity = capacity
         self.batch_size = batch_size
@@ -45,6 +45,9 @@ class ExperienceReplay():
         batch = random.sample(self.memory, self.batch_size)
         return batch
 
+    def can_provide_sample(self):
+        """returns True if enough samples are available for batch sampling"""
+        return len(self.memory) >= self.batch_size
 
 # Vector directions
 Vector2D.left = Vector2D(-1, 0)
