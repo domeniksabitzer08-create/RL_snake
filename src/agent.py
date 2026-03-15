@@ -1,7 +1,8 @@
 import random
-from time import sleep
+from collections import deque
+from collections import namedtuple
 import numpy as np
-from torch.linalg import multi_dot
+
 
 from snake_classes import *
 from tqdm.auto import tqdm
@@ -26,6 +27,23 @@ class Model(nn.Module):
     def forward(self, x):
         return self.layer_stack(x)
 
+class ExperienceReplay():
+    def __init__(self, capacity, batch_size):
+        self.capacity = capacity
+        self.batch_size = batch_size
+        self.memory = deque(maxlen=capacity) # create a double ended queue
+        # Save information about the training in a named tuple
+        self.Experience = namedtuple("Experience", ["state", "action", "reward", "next_state", "is_done"] )
+
+    def add_experience(self, state, action, reward, next_state, is_done):
+        # Create a new exp and save it into memory
+        experience = self.Experience(state, action, reward, next_state, is_done)
+        self.memory.append(experience)
+
+    def sample_batch(self):
+        # return random samples at the length of batch size
+        batch = random.sample(self.memory, self.batch_size)
+        return batch
 
 
 # Vector directions
@@ -40,6 +58,7 @@ Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=True)
 score = 100
 # action
 N_actions = 3
+N_states = 8
 # hyperparameters
 # train
 Lr = 0.1
@@ -49,6 +68,15 @@ Min_epsilon = 0.1
 Epsilon_decay = 0.999
 Num_episodes = 10000
 Max_steps = 300
+
+# Epsilon-Greedy-Algorithm (take the best action or random one)
+def choose_action(state, policy: torch.nn.Module):
+    if np.random.random() <= Epsilon:
+        return Env.sample()
+    else:
+        with torch.inference_mode():
+            return torch.argmax(torch.softmax(policy(state), dim=0))
+
 
 def test_model():
     # test data flow of model with dummy tensor
@@ -63,6 +91,7 @@ def check_state():
     env = SnakeManager(Vector2D(4, 2), Vector2D.right, 5, render=True)
     while True:
         state, reward, is_game_over, score = env.step([0,0,1])
+        print(f"N states: {len(state)}")
         if is_game_over:
             break
 
