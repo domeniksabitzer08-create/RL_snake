@@ -3,6 +3,7 @@ import pygame
 from dataclasses import dataclass
 from random import randint
 
+import torch
 
 
 ### VECTOR CLASS ###
@@ -127,6 +128,7 @@ class SnakeManager:
         self.food = self.init_food()
 
     def reset(self):
+        """resets the enviroment and returns the state"""
         # Snake
         self.part_list = []
         self.direction = self.start_direction
@@ -243,7 +245,7 @@ class SnakeManager:
 
     def sample(self):
         """returns a random action"""
-        return randint(0, 2)
+        return randint(0,2)
 
 
     # only for RL
@@ -257,7 +259,7 @@ class SnakeManager:
         clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
         # create array danger[0,0,1], appends them to the state
         danger = self.get_danger(self.part_list[0])
-        print(f"Danger (left|straight|right): {danger}")
+        #print(f"Danger (left|straight|right): {danger}")
         state.append(danger)
 
         # get direction as int
@@ -265,12 +267,12 @@ class SnakeManager:
         # converts int into array of four directions, appends to the state
         direction = [0,0,0,0]
         direction[direction_idx] = 1
-        print(f"Direction (right|down|left|up): {direction}")
+        #print(f"Direction (right|down|left|up): {direction}")
         state.append(direction)
 
         # get the food direction as an array, appends to the state
         food_dir = self.get_food_dir()
-        print(f"Food direction (right|down|left|up): {food_dir}")
+        #print(f"Food direction (right|down|left|up): {food_dir}")
 
         # turn the combination of arrays to one big array (flatten out)
         state = [x for sub in state for x in sub]
@@ -279,7 +281,7 @@ class SnakeManager:
         snake_length = len(self.part_list)/(Grid.cell_count*Grid.cell_count)
         state.append(snake_length)
 
-        print(f"full flatten state: {state}")
+        #print(f"full flatten state: {state}")
         return state
 
     def get_danger(self, state_pos):
@@ -371,7 +373,6 @@ class SnakeManager:
         # Render UI
         self.render_ui()
 
-
     def render_parts(self, screen: pygame.Surface):
         """Render all snake parts"""
         for part_pos in self.part_list:
@@ -385,18 +386,22 @@ class SnakeManager:
         screen_pos = grid_to_screen_pos(self.food)
         food = pygame.Rect(screen_pos.x + Grid.line_thickness/2, screen_pos.y + Grid.line_thickness/2, food_render_size, food_render_size)
         pygame.draw.rect(screen, food_color, food)
+
     ### RENDER GRID ###
     def draw_grid(self, screen: pygame.Surface):
         self.draw_grid_line_ver(screen)
         self.draw_grid_line_hor(screen)
+
     def draw_grid_line_ver(self, screen: pygame.Surface):
         for i in range(Grid.cell_count+1):
             line = pygame.Rect(Grid.start_pos.x, Grid.start_pos.y + Grid.cell_size*i, Grid.cell_count*Grid.cell_size + Grid.line_thickness, Grid.line_thickness )
             pygame.draw.rect(screen, (150,150,150), line)
+
     def draw_grid_line_hor(self, screen: pygame.Surface):
         for i in range(Grid.cell_count+1):
             line = pygame.Rect(Grid.start_pos.x  + Grid.cell_size*i, Grid.start_pos.y,  Grid.line_thickness, Grid.cell_count*Grid.cell_size + Grid.line_thickness )
             pygame.draw.rect(screen, (150,150,150), line)
+
     ### RENDER UI ###
     def render_ui(self):
         font = pygame.font.SysFont('Arial', 20)
