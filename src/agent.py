@@ -9,7 +9,7 @@ from snake_classes import *
 from tqdm.auto import tqdm
 # importing PyTorch
 import torch
-from torch import nn
+from torch import nn, dtype
 from torch.utils.data import DataLoader
 
 
@@ -156,26 +156,31 @@ def train():
             if memory.can_provide_sample():
                 # get a batch of experiences
                 batch = memory.sample_batch()
-                for state_e, action_e, reward_e, next_state_e, is_done_e in batch:
-                    # optimize the nn
-                    if is_done_e:
-                        q_target = reward_e
-                    else:
-                        with torch.no_grad():
-                            q_target = reward_e + Gamma * target_dqn(next_state_e).max()
 
-                    q_target = torch.tensor(q_target, dtype=torch.float).to(device)
-                    current_q = policy_dqn(state_e)[action_e]
+                # Create batches of experiences for faster computation and better optimization
+                states = torch.stack([e.state for e in batch]).to(device)
+                actions = torch.tensor([e.action for e in batch], dtype=torch.int32).to(device).unsqueeze(1)
+                rewards = torch.tensor([e.reward for e in batch], dtype=torch.float32).to(device)
+                next_states = torch.stack([e.next_state for e in batch]).to(device)
+                dones = torch.tensor([e.is_done for e in batch], dtype=torch.bool).to(device)
 
-                    # calculate the loss
-                    loss = loss_fn(current_q, q_target)
-                    train_loss += loss
-                    # optimizer zero grad
-                    optimizer.zero_grad()
-                    # loss backward
-                    loss.backward()
-                    # optimizer step
-                    optimizer.step()
+                q_values = policy_dqn(states)
+                q_values_next = policy_dqn(next_states)
+
+                # calculate target
+                q_target = rewards + Gamma * q_values_next.max(dim=1, keepdim=True)[0] * (~dones)
+                # get current q values
+                current_q = q_values.gather(1, actions)
+
+                # calculate the loss
+                loss = loss_fn(current_q, q_target)
+                train_loss += loss
+                # optimizer zero grad
+                optimizer.zero_grad()
+                # loss backward
+                loss.backward()
+                # optimizer step
+                optimizer.step()
 
                 # Decay the epsilon
                 Epsilon = max(Min_epsilon, Epsilon * Epsilon_decay)
@@ -186,7 +191,7 @@ def train():
 
 
             if is_done or step >= Max_steps:
-                    if episode % 10 == 0:
+                    if episode % 1000 == 0:
                         try:
                             print(f"Episode: {episode} | Loss: {train_loss/step_count} | Reward: {episode_reward} | step {step} | is done: {is_done}")
                         except UnboundLocalError:
