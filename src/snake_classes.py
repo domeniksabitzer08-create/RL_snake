@@ -45,7 +45,7 @@ Vector2D.down = Vector2D(0, 1)
 
 class Grid:
     start_pos = Vector2D(100, 100)
-    cell_count = 10
+    cell_count = 6
     cell_size = 30
     cell_render_width = 10
     line_thickness = 4
@@ -77,9 +77,9 @@ food_color = (255,0,0)
 food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = 0
-EAT_FOOD_REWARD = 10
-GAME_OVER_REWARD = -10
+NOTHING_REWARD = -0.05
+EAT_FOOD_REWARD = 1
+GAME_OVER_REWARD = -1
 
 class SnakeManager:
     """Manages spawning and moving of the parts"""
@@ -267,12 +267,14 @@ class SnakeManager:
         # converts int into array of four directions, appends to the state
         direction = [0,0,0,0]
         direction[direction_idx] = 1
+
         #print(f"Direction (right|down|left|up): {direction}")
         state.append(direction)
 
         # get the food direction as an array, appends to the state
         food_dir = self.get_food_dir()
         #print(f"Food direction (right|down|left|up): {food_dir}")
+        state.append(food_dir)
 
         # turn the combination of arrays to one big array (flatten out)
         state = [x for sub in state for x in sub]

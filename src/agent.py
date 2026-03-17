@@ -1,4 +1,5 @@
 import random
+import time
 from collections import deque
 from collections import namedtuple
 import numpy as np
@@ -60,25 +61,26 @@ Vector2D.up = Vector2D(0, -1)
 Vector2D.down = Vector2D(0, 1)
 
 # Game Environment
-Env = SnakeManager(Vector2D(4,2),Vector2D.right,5, render=False)
+Env = SnakeManager(Vector2D(4,2),Vector2D.right,3, render=False)
 
 
 # action
 N_actions = 3
-N_states = 8
+N_states = 12
 # hyperparameters
 # train
 Lr = 0.0001
 Gamma = 0.9
 Epsilon = 1
-Min_epsilon = 0.1
+Min_epsilon = 0.01
 Epsilon_decay = 0.999
-Num_episodes = 100000
+Num_episodes = 10001
 Max_steps = 300
 N_capacity = 10000
 Batch_size = 32
-Network_sync_rate = 500
-
+Network_sync_rate = 1000
+# Test
+Test_episodes = 100
 # Epsilon-Greedy-Algorithm (take the best action or random one)
 def choose_action(state, policy: torch.nn.Module):
     if np.random.random() <= Epsilon:
@@ -122,9 +124,13 @@ loss_fn = torch.nn.MSELoss()
 
 
 
-def train():
+def train(render:bool=False):
+    Env = SnakeManager(Vector2D(5, 2), Vector2D.right, 5, render=render)
     print("Starting training...")
+    # data variables
     train_loss = 0
+    taken_steps = 0
+    train_score = 0
     # assign epsilon
     global Epsilon
     # counts the number of steps taken
@@ -151,6 +157,10 @@ def train():
             step_count += 1
             # set the state to the new state
             state = next_state
+
+            # update data
+            taken_steps += 1
+
 
             # if enough experience has been collected, the nn can be optimized
             if memory.can_provide_sample():
@@ -192,13 +202,40 @@ def train():
 
             if is_done or step >= Max_steps:
                     if episode % 1000 == 0:
+                        train_score += score
+                        # calculate avg data
+                        avg_train_loss = train_loss / (episode +1)
+                        avg_train_score = train_score / (episode +1)
+                        avg_taken_steps = taken_steps / (episode +1)
                         try:
-                            print(f"Episode: {episode} | Loss: {train_loss/step_count} | Reward: {episode_reward} | step {step} | is done: {is_done}")
+                            print(f"Episode: {episode} | avg. Loss: {avg_train_loss:.2f} | avg. Score {avg_train_score:.2f} | avg. taken steps {avg_taken_steps:.2f}")
                         except UnboundLocalError:
                             print(
                                 f"Episode: {episode} | Loss: No Loss calculated yet | Reward: {episode_reward} | step {step} | is done: {is_done}")
                     break
 
+def test():
+    # Init new environment
+    env = SnakeManager(Vector2D(5, 2), Vector2D.right, 5, render=True)
+    test_loss = 0
+    global Epsilon
+    Epsilon = 0
+    for episode in range(Test_episodes):
+        episode_reward = 0
+        is_done = False
+        state = env.reset()
+        state = torch.tensor(state, dtype=torch.float).to(device)
+        while not is_done:
+            action = choose_action(state, policy_dqn)
+            next_state, reward, is_done, score = env.step(action)
+            next_state = torch.tensor(next_state, dtype=torch.float).to(device)
+            state = next_state
+            #print(f"state: {state}")
+            time.sleep(0.1)
+
+
 
 if __name__ == '__main__':
     train()
+    #print(f"Epsilon: {Epsilon}")
+    test()
