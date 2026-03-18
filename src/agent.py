@@ -15,12 +15,10 @@ from torch.utils.data import DataLoader
 
 
 class DQN(nn.Module):
-    def __init__(self, in_features, out_features, hidden_units=8):
+    def __init__(self, in_features, out_features, hidden_units=64):
         super().__init__()
         self.layer_stack = nn.Sequential(
             nn.Linear(in_features, hidden_units),
-            nn.ReLU(),
-            nn.Linear(hidden_units, hidden_units),
             nn.ReLU(),
             nn.Linear(hidden_units, hidden_units),
             nn.ReLU(),
@@ -70,15 +68,15 @@ N_states = 12
 # hyperparameters
 # train
 Lr = 0.0001
-Gamma = 0.9
+Gamma = 1
 Epsilon = 1
 Min_epsilon = 0.01
 Epsilon_decay = 0.999
 Num_episodes = 10001
-Max_steps = 300
+Max_steps = 1000
 N_capacity = 10000
 Batch_size = 32
-Network_sync_rate = 1000
+Network_sync_rate = 500
 # Test
 Test_episodes = 100
 # Epsilon-Greedy-Algorithm (take the best action or random one)
@@ -113,8 +111,8 @@ def check_state():
 # device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
 # create instance of the model
-policy_dqn = DQN(N_states, N_actions, 8).to(device)
-target_dqn = DQN(N_states, N_actions, 8).to(device)
+policy_dqn = DQN(N_states, N_actions ).to(device)
+target_dqn = DQN(N_states, N_actions ).to(device)
 # load the state dict form the policy to the target dqn
 target_dqn.load_state_dict(policy_dqn.state_dict())
 
@@ -169,22 +167,23 @@ def train(render:bool=False):
 
                 # Create batches of experiences for faster computation and better optimization
                 states = torch.stack([e.state for e in batch]).to(device)
-                actions = torch.tensor([e.action for e in batch], dtype=torch.int32).to(device).unsqueeze(1)
-                rewards = torch.tensor([e.reward for e in batch], dtype=torch.float32).to(device)
+                actions = torch.tensor([e.action for e in batch], dtype=torch.torch.long).to(device).unsqueeze(1)
+                rewards = torch.tensor([e.reward for e in batch], dtype=torch.float32).unsqueeze(1).to(device)
                 next_states = torch.stack([e.next_state for e in batch]).to(device)
-                dones = torch.tensor([e.is_done for e in batch], dtype=torch.bool).to(device)
+                dones = torch.tensor([e.is_done for e in batch], dtype=torch.bool).unsqueeze(1).float().to(device)
 
                 q_values = policy_dqn(states)
-                q_values_next = policy_dqn(next_states)
+                with torch.no_grad():
+                    q_values_next = target_dqn(next_states)
 
                 # calculate target
-                q_target = rewards + Gamma * q_values_next.max(dim=1, keepdim=True)[0] * (~dones)
+                q_target = rewards + Gamma * q_values_next.max(dim=1, keepdim=True)[0] * (1 - dones)
                 # get current q values
                 current_q = q_values.gather(1, actions)
 
                 # calculate the loss
                 loss = loss_fn(current_q, q_target)
-                train_loss += loss
+                train_loss += loss.item()
                 # optimizer zero grad
                 optimizer.zero_grad()
                 # loss backward
@@ -192,8 +191,6 @@ def train(render:bool=False):
                 # optimizer step
                 optimizer.step()
 
-                # Decay the epsilon
-                Epsilon = max(Min_epsilon, Epsilon * Epsilon_decay)
 
                 # Sync the target with the policy network
                 if step_count % Network_sync_rate == 0:
@@ -205,14 +202,20 @@ def train(render:bool=False):
                         train_score += score
                         # calculate avg data
                         avg_train_loss = train_loss / (episode +1)
-                        avg_train_score = train_score / (episode +1)
                         avg_taken_steps = taken_steps / (episode +1)
+                        avg_train_reward = episode_reward / (episode +1)
+                        # reset data
+                        train_loss = 0
+                        taken_steps = 0
+                        train_score = 0
                         try:
-                            print(f"Episode: {episode} | avg. Loss: {avg_train_loss:.2f} | avg. Score {avg_train_score:.2f} | avg. taken steps {avg_taken_steps:.2f}")
+                            print(f"Episode: {episode} | avg. Loss: {avg_train_loss:.2f} | avg. taken steps {avg_taken_steps:.2f}| avg. reward  {avg_train_reward:.5f}")
                         except UnboundLocalError:
                             print(
                                 f"Episode: {episode} | Loss: No Loss calculated yet | Reward: {episode_reward} | step {step} | is done: {is_done}")
                     break
+        # Decay the epsilon
+        Epsilon = max(Min_epsilon, Epsilon * Epsilon_decay)
 
 def test():
     # Init new environment

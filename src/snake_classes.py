@@ -36,6 +36,11 @@ class Vector2D:
                 return Vector2D(self.x / other, self.y / other)
             else:
                 return NotImplemented
+        def __eq__(self, other):
+            if isinstance(other, Vector2D):
+                return self.x == other.x and self.y == other.y
+            else:
+                return NotImplemented
 
 # Vector directions
 Vector2D.left = Vector2D(-1, 0)
@@ -77,8 +82,8 @@ food_color = (255,0,0)
 food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = -0.05
-EAT_FOOD_REWARD = 1
+NOTHING_REWARD = -0.01
+EAT_FOOD_REWARD = 0.8
 GAME_OVER_REWARD = -1
 
 class SnakeManager:
