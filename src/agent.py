@@ -1,28 +1,46 @@
+import copy
+from pathlib import Path
 import random
-import time
 from collections import deque
 from collections import namedtuple
+
+
 import numpy as np
-from sympy.abc import epsilon
-from torch.distributed.argparse_util import env
+import pygame.time
+import os
+
 
 from snake_classes import *
 from tqdm.auto import tqdm
 # importing PyTorch
 import torch
-from torch import nn, dtype
-from torch.utils.data import DataLoader
+from torch import nn, overrides
+# importing tensorboard
+from torch.utils.tensorboard import SummaryWriter
+
+### --------------------- SETUP --------------------- ###
+Lr = 0.0001
+Num_episodes = 4001
+use_existing_model = False
+used_model_name = "DQN_32_V_2"
+Training = True
+Experiment_name = "4000_32_hidden_units"
+
 
 
 class DQN(nn.Module):
-    def __init__(self, in_features, out_features, hidden_units=64):
+    def __init__(self, in_features, out_features, hidden_units=32):
         super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.hidden_units = hidden_units
+
         self.layer_stack = nn.Sequential(
-            nn.Linear(in_features, hidden_units),
+            nn.Linear(self.in_features, self.hidden_units),
             nn.ReLU(),
-            nn.Linear(hidden_units, hidden_units),
+            nn.Linear(self.hidden_units, self.hidden_units),
             nn.ReLU(),
-            nn.Linear(hidden_units, out_features),
+            nn.Linear(self.hidden_units, self.out_features),
         )
     def forward(self, x):
         return self.layer_stack(x)
@@ -58,27 +76,51 @@ Vector2D.right = Vector2D(1, 0)
 Vector2D.up = Vector2D(0, -1)
 Vector2D.down = Vector2D(0, 1)
 
+### SAVING AND LOADING MODEL ###
+def save_model(model: torch.nn.Module):
+    base_path = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake\models"
+    name = f"{model.__class__.__name__}_{model.hidden_units}_V_{len(os.listdir(base_path))}"
+    print(f"saved model under name: {name}")
+    torch.save(model, fr"{base_path}\{name}.pth")
+    return fr"{base_path}\{name}.pth"
+
+def load_model(model_name: str):
+    base_path = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake\models"
+    model_name = fr"{base_path}\{model_name}.pth"
+    try:
+        model = torch.load(model_name, weights_only=False)
+        print(f"model {model_name}.pth was loaded| type: {type(model)}")
+        return model
+    except FileNotFoundError:
+        print(f"{model_name} was not found!")
+        raise FileNotFoundError
+
+
 # Game Environment
 Env = SnakeManager(Vector2D(4,2),Vector2D.right,3, render=False)
-
 
 # action
 N_actions = 3
 N_states = 12
 # hyperparameters
 # train
-Lr = 0.0001
 Gamma = 1
 Epsilon = 1
 Min_epsilon = 0.01
-Epsilon_decay = 0.999
-Num_episodes = 10001
+Epsilon_decay = 0.99
 Max_steps = 1000
 N_capacity = 10000
 Batch_size = 32
 Network_sync_rate = 500
+# Tensorboard
+BASE_DIR = Path(__file__).resolve().parent
+runs_path = BASE_DIR / "runs"
+exp_path = runs_path / Experiment_name
+exp_path.mkdir(parents=True, exist_ok=True)
+Writer = SummaryWriter(exp_path)
 # Test
 Test_episodes = 100
+
 # Epsilon-Greedy-Algorithm (take the best action or random one)
 def choose_action(state, policy: torch.nn.Module):
     if np.random.random() <= Epsilon:
@@ -110,9 +152,17 @@ def check_state():
 ### SETUP ###
 # device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"
+print(f"using device: {device} ")
 # create instance of the model
-policy_dqn = DQN(N_states, N_actions ).to(device)
-target_dqn = DQN(N_states, N_actions ).to(device)
+
+
+if use_existing_model:
+    policy_dqn = load_model(used_model_name).to(device)
+else:
+    policy_dqn = DQN(N_states, N_actions).to(device)
+
+target_dqn = copy.deepcopy(policy_dqn)
 # load the state dict form the policy to the target dqn
 target_dqn.load_state_dict(policy_dqn.state_dict())
 
@@ -125,9 +175,17 @@ loss_fn = torch.nn.MSELoss()
 def train(render:bool=False):
     Env = SnakeManager(Vector2D(5, 2), Vector2D.right, 5, render=render)
     print("Starting training...")
+    # data tracking
+    train_data_tracking = {
+        "episode": [],
+        "reward": [],
+        "steps": [],
+        "score": [],
+        "epsilon": []
+    }
     # data variables
     train_loss = 0
-    taken_steps = 0
+    avg_taken_steps = 0
     train_score = 0
     # assign epsilon
     global Epsilon
@@ -135,7 +193,9 @@ def train(render:bool=False):
     step_count = 0
     # Initialize Experience Replay
     memory = ExperienceReplay(N_capacity, Batch_size)
-    for episode in range(Num_episodes):
+    for episode in tqdm(range(Num_episodes)):
+        episode_score = 0
+        taken_steps = 0
         episode_reward = 0
         is_done = False
         state = Env.reset()
@@ -156,8 +216,11 @@ def train(render:bool=False):
             # set the state to the new state
             state = next_state
 
-            # update data
+            # update steps and score
             taken_steps += 1
+            avg_taken_steps += 1
+            episode_score += reward
+
 
 
             # if enough experience has been collected, the nn can be optimized
@@ -198,27 +261,44 @@ def train(render:bool=False):
 
 
             if is_done or step >= Max_steps:
-                    if episode % 1000 == 0:
-                        train_score += score
-                        # calculate avg data
-                        avg_train_loss = train_loss / (episode +1)
-                        avg_taken_steps = taken_steps / (episode +1)
-                        avg_train_reward = episode_reward / (episode +1)
-                        # reset data
-                        train_loss = 0
-                        taken_steps = 0
-                        train_score = 0
-                        try:
-                            print(f"Episode: {episode} | avg. Loss: {avg_train_loss:.2f} | avg. taken steps {avg_taken_steps:.2f}| avg. reward  {avg_train_reward:.5f}")
-                        except UnboundLocalError:
-                            print(
-                                f"Episode: {episode} | Loss: No Loss calculated yet | Reward: {episode_reward} | step {step} | is done: {is_done}")
-                    break
+                # append data
+                train_data_tracking["episode"].append(episode)
+                train_data_tracking["reward"].append(episode_reward)
+                train_data_tracking["steps"].append(taken_steps)
+                train_data_tracking["score"].append(episode_score)
+                train_data_tracking["epsilon"].append(Epsilon)
+                # add to data to tensorboard
+                Writer.add_scalar("reward", episode_reward, episode)
+                Writer.add_scalar("score", episode_score, episode)
+                Writer.add_scalar("epsilon", Epsilon, episode)
+                Writer.add_scalar("steps", taken_steps, episode)
+
+                if episode % 1000 == 0 and episode != 0:
+                    train_score += score
+                    # calculate avg data
+                    avg_train_loss = train_loss / (episode +1)
+                    avg_taken_steps = avg_taken_steps / (episode +1)
+                    avg_train_reward = episode_reward / (episode +1)
+
+                    try:
+                        print(f"Episode: {episode} | avg. Loss: {avg_train_loss:.2f} | avg. taken steps {avg_taken_steps:.2f}| avg. reward  {avg_train_reward:.5f}")
+                    except UnboundLocalError:
+                        print(
+                            f"Episode: {episode} | Loss: No Loss calculated yet | Reward: {episode_reward} | step {step} | is done: {is_done}")
+                    # reset data after it has been printed
+                    train_loss = 0
+                    avg_taken_steps = 0
+                    train_score = 0
+                break
         # Decay the epsilon
         Epsilon = max(Min_epsilon, Epsilon * Epsilon_decay)
+    # Save model
+    print(train_data_tracking)
+    model_path = save_model(policy_dqn)
 
 def test():
     # Init new environment
+    clock = pygame.time.Clock()
     env = SnakeManager(Vector2D(5, 2), Vector2D.right, 5, render=True)
     test_loss = 0
     global Epsilon
@@ -233,12 +313,16 @@ def test():
             next_state, reward, is_done, score = env.step(action)
             next_state = torch.tensor(next_state, dtype=torch.float).to(device)
             state = next_state
-            #print(f"state: {state}")
-            time.sleep(0.1)
+            # Pygame rendering
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+            clock.tick(10)
 
 
 
 if __name__ == '__main__':
-    train()
-    #print(f"Epsilon: {Epsilon}")
+    os.chdir(r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake")
+    if Training:
+        train()
     test()

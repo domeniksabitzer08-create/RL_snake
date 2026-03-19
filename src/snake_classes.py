@@ -50,7 +50,7 @@ Vector2D.down = Vector2D(0, 1)
 
 class Grid:
     start_pos = Vector2D(100, 100)
-    cell_count = 6
+    cell_count = 11
     cell_size = 30
     cell_render_width = 10
     line_thickness = 4
@@ -82,8 +82,8 @@ food_color = (255,0,0)
 food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = -0.01
-EAT_FOOD_REWARD = 0.8
+NOTHING_REWARD = -0.02
+EAT_FOOD_REWARD = 1
 GAME_OVER_REWARD = -1
 
 class SnakeManager:
@@ -157,8 +157,10 @@ class SnakeManager:
         if self.render:
             self.render_objects(self.screen)
             pygame.display.update()
+
         self.change_direction(action)
         self.reward = NOTHING_REWARD
+
         # Move each part to the position of the part before, but not the first one
         for i in range(len(self.part_list),1,-1):
             self.part_list[i-1] = self.part_list[i-2]
@@ -171,14 +173,18 @@ class SnakeManager:
         # get the state
         state = self.get_state()
         ### Check Collisions ##
-        # Check if head collides with food
-        self.check_food_collision()
+
         # Check if Snake collides with other part of snake
         if self.check_other_part_collision(self.part_list[0]):
             self.game_over()
+
         # Check if snake head collides with border
         if self.check_border_collision(self.part_list[0]):
             self.game_over()
+
+
+        # Check if head collides with food
+        self.check_food_collision()
         self.score = len(self.part_list) - self.n_starting_parts
 
         return state, self.reward, self.is_game_over, self.score
