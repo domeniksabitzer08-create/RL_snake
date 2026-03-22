@@ -98,7 +98,6 @@ def load_model(model_name: str):
 
 # Game Environment
 Env = SnakeManager(Vector2D(4,2),Vector2D.right,3, render=False)
-
 # action
 N_actions = 3
 N_states = 12
