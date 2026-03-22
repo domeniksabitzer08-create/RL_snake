@@ -20,11 +20,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 ### --------------------- SETUP --------------------- ###
 Lr = 0.0001
-Num_episodes = 4001
+Num_episodes = 301
 use_existing_model = False
 used_model_name = "DQN_32_V_2"
 Training = True
-Experiment_name = "4000_32_hidden_units"
+Experiment_name = "4000_32_hidden_units_tensorboard_test"
 
 
 
@@ -113,11 +113,11 @@ N_capacity = 10000
 Batch_size = 32
 Network_sync_rate = 500
 # Tensorboard
-BASE_DIR = Path(__file__).resolve().parent
-runs_path = BASE_DIR / "runs"
-exp_path = runs_path / Experiment_name
-exp_path.mkdir(parents=True, exist_ok=True)
-Writer = SummaryWriter(exp_path)
+BASE_DIR = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake"
+runs_path = BASE_DIR + r"\runs"
+exp_path = runs_path + fr"\{Experiment_name}"
+os.mkdir(exp_path)
+Writer = SummaryWriter(str(exp_path))
 # Test
 Test_episodes = 100
 
