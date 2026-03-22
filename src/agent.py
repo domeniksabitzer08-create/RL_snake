@@ -1,5 +1,4 @@
 import copy
-from pathlib import Path
 import random
 from collections import deque
 from collections import namedtuple
@@ -14,7 +13,7 @@ from snake_classes import *
 from tqdm.auto import tqdm
 # importing PyTorch
 import torch
-from torch import nn, overrides
+from torch import nn
 # importing tensorboard
 from torch.utils.tensorboard import SummaryWriter
 
@@ -98,10 +97,12 @@ def load_model(model_name: str):
 
 # Game Environment
 Env = SnakeManager(Vector2D(4,2),Vector2D.right,3, render=False)
-
+state, reward, is_done, score = Env.step([0,0,1])
+print(f"state: {state} ")
+print(f"\n\n len of state: {len(state)}")
 # action
 N_actions = 3
-N_states = 12
+N_states = (Grid.cell_count*Grid.cell_count)
 # hyperparameters
 # train
 Gamma = 1
@@ -132,7 +133,7 @@ def choose_action(state, policy: torch.nn.Module):
 
 def test_model():
     # test data flow of model with dummy tensor
-    model = DQN(10, 3)
+    model = DQN(N_states, 3)
     dummy_tensor = torch.rand(10)
     # send tensor through model
     y_logit = model(dummy_tensor)

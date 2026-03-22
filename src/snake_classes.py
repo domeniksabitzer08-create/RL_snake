@@ -149,7 +149,7 @@ class SnakeManager:
         self.score = 0
 
         self.init_parts()
-        state = self.get_state()
+        state = self.get_full_state()
         return state
 
     def step(self, action):
@@ -171,7 +171,7 @@ class SnakeManager:
         ### RL ONLY ###
 
         # get the state
-        state = self.get_state()
+        state = self.get_full_state()
         ### Check Collisions ##
 
         # Check if Snake collides with other part of snake
@@ -260,119 +260,28 @@ class SnakeManager:
 
 
     # only for RL
-    def get_state(self):
+    def get_full_state(self):
         """
-        returns the current state in form of an array.
+        get the complete grid as an 1 dim array
+        with Values 0-3
+        0: empty
+        1: snake_head
+        2: snake_body
+        3: food
         """
-
         state = []
-
-        clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
-        # create array danger[0,0,1], appends them to the state
-        danger = self.get_danger(self.part_list[0])
-        #print(f"Danger (left|straight|right): {danger}")
-        state.append(danger)
-
-        # get direction as int
-        direction_idx = clockwise_dir.index(self.direction)
-        # converts int into array of four directions, appends to the state
-        direction = [0,0,0,0]
-        direction[direction_idx] = 1
-
-        #print(f"Direction (right|down|left|up): {direction}")
-        state.append(direction)
-
-        # get the food direction as an array, appends to the state
-        food_dir = self.get_food_dir()
-        #print(f"Food direction (right|down|left|up): {food_dir}")
-        state.append(food_dir)
-
-        # turn the combination of arrays to one big array (flatten out)
-        state = [x for sub in state for x in sub]
-
-        # add the snake length to state, and divide it by the max len that the number is between 0-1
-        snake_length = len(self.part_list)/(Grid.cell_count*Grid.cell_count)
-        state.append(snake_length)
-
-        #print(f"full flatten state: {state}")
+        for x in range(Grid.cell_count):
+            for y in range(Grid.cell_count):
+                pos = Vector2D(x,y)
+                if pos == self.part_list[0]:
+                    state.append(1)
+                elif pos in self.part_list:
+                    state.append(2)
+                elif pos == self.food:
+                    state.append(3)
+                else:
+                    state.append(0)
         return state
-
-    def get_danger(self, state_pos):
-        # Danger [Left, Front, Right]
-        clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
-        danger = [0,0,0]
-
-        front_idx = clockwise_dir.index(self.direction)
-        front_dir = clockwise_dir[front_idx]
-        front = state_pos + front_dir
-
-        left_idx = front_idx -1
-        # if the idx is -1, then the next direction would be up (idx=3)
-        if left_idx == -1:
-            left_idx = 3
-        left_dir = clockwise_dir[left_idx]
-        left = state_pos + left_dir
-
-        right_idx = front_idx + 1
-        if right_idx == 4:
-            right_idx = 0
-        right_dir = clockwise_dir[right_idx]
-        right = state_pos + right_dir
-
-        # Check in front
-        if self.check_border_collision(front) or self.check_other_part_collision(front):
-            danger[1] = 1
-        else:
-            danger[1] = 0
-        # Check left
-        if self.check_border_collision(left) or self.check_other_part_collision(left):
-            danger[0] = 1
-        else:
-            danger[0] = 0
-        # Check right
-        if self.check_border_collision(right) or self.check_other_part_collision(right):
-            danger[2] = 1
-        else:
-            danger[2] = 0
-
-        return danger
-
-    def get_food_dir(self):
-        """returns the direction of the food as an array"""
-        food = self.food
-        head = self.part_list[0]
-        dx = food.x - head.x
-        dy = food.y - head.y
-        if self.direction == Vector2D.up:
-            food_left = dx < 0
-            food_right = dx > 0
-            food_front = dy < 0
-            food_back = dy > 0
-        elif self.direction == Vector2D.right:
-            food_left = dy < 0
-            food_right = dy > 0
-            food_front = dx > 0
-            food_back = dx < 0
-        elif self.direction == Vector2D.down:
-            food_left = dx > 0
-            food_right = dx < 0
-            food_front = dy > 0
-            food_back = dy < 0
-        elif self.direction == Vector2D.left:
-            food_left = dy > 0
-            food_right = dy < 0
-            food_front = dx < 0
-            food_back = dx > 0
-        return [int(food_left), int(food_front), int(food_back), int(food_right)]
-
-    def convert_to_int(self, arr: list):
-        summe = 0
-        for i in range(len(arr)):
-            num = int(arr[i])
-            erg = (2 ** i) * num
-            summe += erg
-        return summe
-
                                         ### RENDERING ###
     #-------------------------------------------------------------------------------------------------------#
     def render_objects(self, screen: pygame.Surface):
