@@ -269,18 +269,24 @@ class SnakeManager:
         2: snake_body
         3: food
         """
-        state = []
+        n_types_of_cells = 3
+
+        state = torch.zeros((n_types_of_cells,Grid.cell_count*Grid.cell_count))
+
+        # Append a value for each type of cell
         for x in range(Grid.cell_count):
             for y in range(Grid.cell_count):
                 pos = Vector2D(x,y)
+                # if head
                 if pos == self.part_list[0]:
-                    state.append(1)
+                    state[0][x*y] = 1/n_types_of_cells
+                # if body part
                 elif pos in self.part_list:
-                    state.append(2)
+                    state[1][x*y] = 2/n_types_of_cells
+                # if food
                 elif pos == self.food:
-                    state.append(3)
-                else:
-                    state.append(0)
+                    state[2][x*y] = 3/n_types_of_cells
+        # Append the direction
         return state
                                         ### RENDERING ###
     #-------------------------------------------------------------------------------------------------------#
