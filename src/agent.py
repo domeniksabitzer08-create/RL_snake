@@ -19,11 +19,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 ### --------------------- SETUP --------------------- ###
 Lr = 0.0001
-Num_episodes = 3001
-use_existing_model = False
-used_model_name = "DQN_32_V_2"
-Training = True
-Experiment_name = "WMd_3000_hiddenUnits_32"
+Num_episodes = 801
+use_existing_model = True
+used_model_name = "DQN_32_V_7"
+Training = not use_existing_model
+Experiment_name = "WM_3000_hiddenUnits_32_short_Run_2"
 
 
 
@@ -35,6 +35,7 @@ class DQN(nn.Module):
         self.hidden_units = hidden_units
 
         self.layer_stack = nn.Sequential(
+            nn.Flatten(),
             nn.Linear(self.in_features, self.hidden_units),
             nn.ReLU(),
             nn.Linear(self.hidden_units, self.hidden_units),
@@ -101,11 +102,11 @@ state, reward, is_done, score = Env.step([0,0,1])
 print(f"state shape : {torch.tensor(state).shape} | n states: {(Grid.cell_count*Grid.cell_count)}")
 print(f"\n\n len of state: {len(state)}")
 # action
-N_actions = 1
-N_states = Grid.cell_count*Grid.cell_count
+N_actions = 3
+N_states = Grid.cell_count*Grid.cell_count*3
 # hyperparameters
 # train
-Gamma = 1
+Gamma = 0.99
 Epsilon = 1
 Min_epsilon = 0.01
 Epsilon_decay = 0.99
@@ -114,11 +115,12 @@ N_capacity = 10000
 Batch_size = 32
 Network_sync_rate = 500
 # Tensorboard
-BASE_DIR = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake"
-runs_path = BASE_DIR + r"\runs"
-exp_path = runs_path + fr"\{Experiment_name}"
-#os.mkdir(exp_path)
-#Writer = SummaryWriter(str(exp_path))
+if Training:
+    BASE_DIR = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake"
+    runs_path = BASE_DIR + r"\runs"
+    exp_path = runs_path + fr"\{Experiment_name}"
+    os.mkdir(exp_path)
+    Writer = SummaryWriter(str(exp_path))
 # Test
 Test_episodes = 100
 
@@ -164,7 +166,7 @@ device = "cpu"
 print(f"using device: {device} ")
 # create instance of the model
 
-
+# ---- Create Model or use existing ---- #
 if use_existing_model:
     policy_dqn = load_model(used_model_name).to(device)
 else:
@@ -208,9 +210,15 @@ def train(render:bool=False):
         is_done = False
         state = Env.reset()
         state = torch.tensor(state, dtype=torch.float).to(device)
+        if episode == 0:
+            print(f"shape of one state: {state.shape}")
+            print(f"1. channel: \n {state[0]}")
+            print(f"2. channel: \n {state[1]}")
+            print(f"3. channel: \n {state[2]}")
         for step in range(Max_steps):
             # choose an action
-            action = choose_action(state.unsqueeze(dim=0), policy_dqn)
+            state_for_model = state.unsqueeze(dim=0)
+            action = choose_action(state_for_model, policy_dqn)
             # make the action and receive values
             next_state, reward, is_done, score = Env.step(action)
             next_state = torch.tensor(next_state, dtype=torch.float).to(device)
@@ -236,7 +244,7 @@ def train(render:bool=False):
                 #print("start real training")
                 # Create batches of experiences for faster computation and better optimization
                 states = torch.stack([e.state for e in batch]).to(device)
-                actions = torch.tensor([e.action for e in batch], dtype=torch.torch.int64).to(device).unsqueeze(1).unsqueeze(2)
+                actions = torch.tensor([e.action for e in batch], dtype=torch.torch.int64).to(device)
                 rewards = torch.tensor([e.reward for e in batch], dtype=torch.float32).unsqueeze(1).to(device)
                 next_states = torch.stack([e.next_state for e in batch]).to(device)
                 dones = torch.tensor([e.is_done for e in batch], dtype=torch.bool).unsqueeze(1).float().to(device)
@@ -249,10 +257,8 @@ def train(render:bool=False):
                 q_target = rewards + Gamma * q_values_next.max(dim=1, keepdim=True)[0] * (1 - dones)
                 # get current q values
                 #print(f"actions shape: {actions.shape}")
-                #print(f"actions: {actions}")
                 #print(f"q_values shape: {q_values.shape} ")
-
-                current_q = q_values.gather(1, actions)
+                current_q = q_values.gather(1, actions.unsqueeze(1))
 
                 # calculate the loss
                 loss = loss_fn(current_q, q_target)
@@ -278,15 +284,10 @@ def train(render:bool=False):
                 train_data_tracking["score"].append(episode_score)
                 train_data_tracking["epsilon"].append(Epsilon)
                 # add to data to tensorboard
-                #Writer.add_scalar("reward", episode_reward, episode)
-                #Writer.add_scalar("score", episode_score, episode)
-                #Writer.add_scalar("epsilon", Epsilon, episode)
-                #Writer.add_scalar("steps", taken_steps, episode)
-                if episode == 0:
-                    print(f"shape of one state: {state.shape}")
-                    print(f"1. channel: \n {state[0]}")
-                    print(f"2. channel: \n {state[1]}")
-                    print(f"3. channel: \n {state[2]}")
+                Writer.add_scalar("reward", episode_reward, episode)
+                Writer.add_scalar("score", episode_score, episode)
+                Writer.add_scalar("epsilon", Epsilon, episode)
+                Writer.add_scalar("steps", taken_steps, episode)
                 if episode % 1000 == 0 and episode != 0:
                     train_score += score
                     # calculate avg data
@@ -325,7 +326,7 @@ def test():
         state = env.reset()
         state = torch.tensor(state, dtype=torch.float).to(device)
         while not is_done:
-            action = choose_action(state, policy_dqn)
+            action = choose_action(state.unsqueeze(dim=0), policy_dqn)
             next_state, reward, is_done, score = env.step(action)
             next_state = torch.tensor(next_state, dtype=torch.float).to(device)
             state = next_state

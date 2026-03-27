@@ -82,9 +82,9 @@ food_color = (255,0,0)
 food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = -0.02
-EAT_FOOD_REWARD = 1
-GAME_OVER_REWARD = -1
+NOTHING_REWARD = -0.1
+EAT_FOOD_REWARD = 10
+GAME_OVER_REWARD = -10
 
 class SnakeManager:
     """Manages spawning and moving of the parts"""
@@ -271,7 +271,7 @@ class SnakeManager:
         """
         n_types_of_cells = 3
 
-        state = torch.zeros((n_types_of_cells,Grid.cell_count*Grid.cell_count))
+        state = torch.zeros((n_types_of_cells,Grid.cell_count,Grid.cell_count))
 
         # Append a value for each type of cell
         for x in range(Grid.cell_count):
@@ -284,16 +284,17 @@ class SnakeManager:
                         print(f"Error in equation")
                 # if head
                 if pos == self.part_list[0]:
-                    state[0][x*y] = 1
+                    state[0][y][x] = 1
 
                 # if body part
                 elif pos in self.part_list:
                     if pos != self.part_list[0]:
-                        state[1][x*y] = 1
+                        state[1][y][x] = 1
                 # if food
                 elif pos == self.food:
-                    state[2][x*y] = 1
+                    state[2][y][x] = 1
         # Append the direction
+        state = torch.stack([state[0],state[1],state[2]])
         return state
                                         ### RENDERING ###
     #-------------------------------------------------------------------------------------------------------#
