@@ -19,11 +19,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 ### --------------------- SETUP --------------------- ###
 Lr = 0.0001
-Num_episodes = 1001
+Num_episodes = 3001
 use_existing_model = False
 used_model_name = "DQN_32_V_2"
 Training = True
-Experiment_name = "WM_3000_hiddenUnits_32"
+Experiment_name = "WMd_3000_hiddenUnits_32"
 
 
 
@@ -106,7 +106,7 @@ N_states = Grid.cell_count*Grid.cell_count
 # hyperparameters
 # train
 Gamma = 1
-Epsilon = 0
+Epsilon = 1
 Min_epsilon = 0.01
 Epsilon_decay = 0.99
 Max_steps = 1000
@@ -207,13 +207,13 @@ def train(render:bool=False):
         episode_reward = 0
         is_done = False
         state = Env.reset()
-        state = torch.tensor(state, dtype=torch.float).permute(1,0).unsqueeze(dim=0).to(device)
+        state = torch.tensor(state, dtype=torch.float).to(device)
         for step in range(Max_steps):
             # choose an action
-            action = choose_action(state.permute(1,0), policy_dqn)
+            action = choose_action(state.unsqueeze(dim=0), policy_dqn)
             # make the action and receive values
             next_state, reward, is_done, score = Env.step(action)
-            next_state = torch.tensor(next_state, dtype=torch.float).permute(1,0).unsqueeze(dim=0).to(device)
+            next_state = torch.tensor(next_state, dtype=torch.float).to(device)
             # accumulate reward
             episode_reward += reward
             # add experience to the replay buffer
@@ -229,19 +229,18 @@ def train(render:bool=False):
             episode_score += reward
 
 
-
             # if enough experience has been collected, the nn can be optimized
             if memory.can_provide_sample():
                 # get a batch of experiences
                 batch = memory.sample_batch()
-                print("start real training")
+                #print("start real training")
                 # Create batches of experiences for faster computation and better optimization
                 states = torch.stack([e.state for e in batch]).to(device)
                 actions = torch.tensor([e.action for e in batch], dtype=torch.torch.int64).to(device).unsqueeze(1).unsqueeze(2)
                 rewards = torch.tensor([e.reward for e in batch], dtype=torch.float32).unsqueeze(1).to(device)
                 next_states = torch.stack([e.next_state for e in batch]).to(device)
                 dones = torch.tensor([e.is_done for e in batch], dtype=torch.bool).unsqueeze(1).float().to(device)
-                print(f"shape of states: {states.shape}")
+                #print(f"shape of batch of states: {states.shape}")
                 q_values = policy_dqn(states)
                 with torch.no_grad():
                     q_values_next = target_dqn(next_states)
@@ -283,7 +282,11 @@ def train(render:bool=False):
                 #Writer.add_scalar("score", episode_score, episode)
                 #Writer.add_scalar("epsilon", Epsilon, episode)
                 #Writer.add_scalar("steps", taken_steps, episode)
-
+                if episode == 0:
+                    print(f"shape of one state: {state.shape}")
+                    print(f"1. channel: \n {state[0]}")
+                    print(f"2. channel: \n {state[1]}")
+                    print(f"3. channel: \n {state[2]}")
                 if episode % 1000 == 0 and episode != 0:
                     train_score += score
                     # calculate avg data
@@ -300,10 +303,12 @@ def train(render:bool=False):
                     train_loss = 0
                     avg_taken_steps = 0
                     train_score = 0
+
                 break
         # Decay the epsilon
         Epsilon = max(Min_epsilon, Epsilon * Epsilon_decay)
     # Save model
+    print("training ended")
     print(train_data_tracking)
     model_path = save_model(policy_dqn)
 

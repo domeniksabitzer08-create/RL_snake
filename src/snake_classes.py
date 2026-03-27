@@ -277,15 +277,22 @@ class SnakeManager:
         for x in range(Grid.cell_count):
             for y in range(Grid.cell_count):
                 pos = Vector2D(x,y)
+                if pos.x == self.part_list[0].x and pos.y == self.part_list[0].y:
+                    if pos == self.part_list[0]:
+                        pass
+                    else:
+                        print(f"Error in equation")
                 # if head
                 if pos == self.part_list[0]:
-                    state[0][x*y] = 1/n_types_of_cells
+                    state[0][x*y] = 1
+
                 # if body part
                 elif pos in self.part_list:
-                    state[1][x*y] = 2/n_types_of_cells
+                    if pos != self.part_list[0]:
+                        state[1][x*y] = 1
                 # if food
                 elif pos == self.food:
-                    state[2][x*y] = 3/n_types_of_cells
+                    state[2][x*y] = 1
         # Append the direction
         return state
                                         ### RENDERING ###
