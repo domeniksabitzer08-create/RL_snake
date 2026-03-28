@@ -1,4 +1,3 @@
-
 import pygame
 from dataclasses import dataclass
 from random import randint
@@ -50,7 +49,7 @@ Vector2D.down = Vector2D(0, 1)
 
 class Grid:
     start_pos = Vector2D(100, 100)
-    cell_count = 11
+    cell_count = 6
     cell_size = 30
     cell_render_width = 10
     line_thickness = 4
@@ -83,12 +82,13 @@ food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
 NOTHING_REWARD = -0.1
-EAT_FOOD_REWARD = 10
-GAME_OVER_REWARD = -10
+EAT_FOOD_REWARD = 2
+GAME_OVER_REWARD = -0.8
 
 class SnakeManager:
     """Manages spawning and moving of the parts"""
     def __init__(self, start_pos: Vector2D, start_direction: Vector2D, n_starting_parts: int, render: bool = True):
+        self.food_spawned = False
         # rendering
         self.render = render
         # Snake
@@ -162,11 +162,14 @@ class SnakeManager:
         self.reward = NOTHING_REWARD
 
         # Move each part to the position of the part before, but not the first one
-        for i in range(len(self.part_list),1,-1):
-            self.part_list[i-1] = self.part_list[i-2]
-        # Move the first part
-        self.part_list[0] += self.direction
+        new_parts = [self.part_list[0]+ self.direction]
+        for i in range(len(self.part_list)-1):
+            new_parts.append(self.part_list[i])
+        self.part_list = new_parts
         self.is_dir_changing = False
+
+
+
 
         ### RL ONLY ###
 
@@ -185,7 +188,7 @@ class SnakeManager:
 
         # Check if head collides with food
         self.check_food_collision()
-        self.score = len(self.part_list) - self.n_starting_parts
+        self.score = len(self.part_list)+1 - self.n_starting_parts
 
         return state, self.reward, self.is_game_over, self.score
 
@@ -199,11 +202,19 @@ class SnakeManager:
 
     def init_food(self) -> Vector2D:
         """Init on a random pos and returns the food object"""
+        self.food_spawned = False
         # Create one instance of Food on rnd pos
         spawn_pos = Vector2D(randint(0,Grid.cell_count-1), randint(0,Grid.cell_count-1))
         # If it collides with a part it will try again
-        while self.check_other_part_collision(spawn_pos):
-            spawn_pos = Vector2D(randint(0, Grid.cell_count-1), randint(0, Grid.cell_count-1))
+        while not self.food_spawned:
+            if not self.check_other_part_collision(spawn_pos) and not spawn_pos == self.part_list[0]:
+                self.food_spawned = True
+                break
+            else:
+                spawn_pos = Vector2D(randint(0, Grid.cell_count - 1), randint(0, Grid.cell_count - 1))
+
+        if not self.food_spawned:
+            print(f"This Point should never be reached")
         return spawn_pos
 
     def add_part(self):
@@ -212,10 +223,11 @@ class SnakeManager:
 
     def check_other_part_collision(self, obj_pos: Vector2D) -> bool:
         """Returns True if the object collides with any other part of the snake."""
-        for i in range(1,len(self.part_list)):
-            if self.part_list[i] == obj_pos:
-                return True
-        return False
+        body_parts = self.part_list[1:]
+        if obj_pos in body_parts:
+            return True
+        else:
+            return False
 
     def check_border_collision(self, part_pos: Vector2D ) -> bool:
         """returns true if pos is outside the border"""

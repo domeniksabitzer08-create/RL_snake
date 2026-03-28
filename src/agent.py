@@ -1,5 +1,6 @@
 import copy
 import random
+import time
 from collections import deque
 from collections import namedtuple
 
@@ -19,16 +20,22 @@ from torch.utils.tensorboard import SummaryWriter
 
 ### --------------------- SETUP --------------------- ###
 Lr = 0.0001
-Num_episodes = 801
+Num_episodes = 100
 use_existing_model = True
-used_model_name = "DQN_32_V_7"
+used_model_name = "DQN_256_V_20"
 Training = not use_existing_model
-Experiment_name = "WM_3000_hiddenUnits_32_short_Run_2"
+Experiment_name = "Debug_" + str(time.time())
+
+### ENVIRONMENT ###
+global Train_Env
+Train_Env = SnakeManager(Vector2D(3,3),Vector2D.right,4, render=False)
+global Test_Env
+Test_Env = SnakeManager(Vector2D(3,3),Vector2D.right,4, render=True)
 
 
 
 class DQN(nn.Module):
-    def __init__(self, in_features, out_features, hidden_units=32):
+    def __init__(self, in_features, out_features, hidden_units=256):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -95,12 +102,6 @@ def load_model(model_name: str):
         print(f"{model_name} was not found!")
         raise FileNotFoundError
 
-
-# Game Environment
-Env = SnakeManager(Vector2D(4,2),Vector2D.right,3, render=False)
-state, reward, is_done, score = Env.step([0,0,1])
-print(f"state shape : {torch.tensor(state).shape} | n states: {(Grid.cell_count*Grid.cell_count)}")
-print(f"\n\n len of state: {len(state)}")
 # action
 N_actions = 3
 N_states = Grid.cell_count*Grid.cell_count*3
@@ -110,10 +111,10 @@ Gamma = 0.99
 Epsilon = 1
 Min_epsilon = 0.01
 Epsilon_decay = 0.99
-Max_steps = 1000
+Max_steps = 300
 N_capacity = 10000
 Batch_size = 32
-Network_sync_rate = 500
+Network_sync_rate = 1000
 # Tensorboard
 if Training:
     BASE_DIR = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake"
@@ -125,9 +126,9 @@ if Training:
 Test_episodes = 100
 
 # Epsilon-Greedy-Algorithm (take the best action or random one)
-def choose_action(state, policy: torch.nn.Module):
+def choose_action(state, policy: torch.nn.Module, env: SnakeManager):
     if np.random.random() <= Epsilon:
-        return Env.sample()
+        return env.sample()
     else:
         with torch.inference_mode():
             y_logit = policy(state)
@@ -183,7 +184,8 @@ loss_fn = torch.nn.MSELoss()
 
 
 def train(render:bool=False):
-    Env = SnakeManager(Vector2D(5, 2), Vector2D.right, 5, render=render)
+    global Train_Env
+    Env = Train_Env
     print("Starting training...")
     # data tracking
     train_data_tracking = {
@@ -218,9 +220,12 @@ def train(render:bool=False):
         for step in range(Max_steps):
             # choose an action
             state_for_model = state.unsqueeze(dim=0)
-            action = choose_action(state_for_model, policy_dqn)
+            action = choose_action(state_for_model, policy_dqn, Env)
             # make the action and receive values
             next_state, reward, is_done, score = Env.step(action)
+            # if the max step range is reached, give a Game over Reward
+            if step == Max_steps - 1:
+                reward = -1
             next_state = torch.tensor(next_state, dtype=torch.float).to(device)
             # accumulate reward
             episode_reward += reward
@@ -316,7 +321,8 @@ def train(render:bool=False):
 def test():
     # Init new environment
     clock = pygame.time.Clock()
-    env = SnakeManager(Vector2D(5, 2), Vector2D.right, 5, render=True)
+    global Test_Env
+    env = Test_Env
     test_loss = 0
     global Epsilon
     Epsilon = 0
@@ -326,7 +332,7 @@ def test():
         state = env.reset()
         state = torch.tensor(state, dtype=torch.float).to(device)
         while not is_done:
-            action = choose_action(state.unsqueeze(dim=0), policy_dqn)
+            action = choose_action(state.unsqueeze(dim=0), policy_dqn, env)
             next_state, reward, is_done, score = env.step(action)
             next_state = torch.tensor(next_state, dtype=torch.float).to(device)
             state = next_state
