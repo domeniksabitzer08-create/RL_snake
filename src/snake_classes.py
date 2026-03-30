@@ -1,7 +1,7 @@
 import pygame
 from dataclasses import dataclass
 from random import randint
-
+import math
 import torch
 
 
@@ -40,6 +40,8 @@ class Vector2D:
                 return self.x == other.x and self.y == other.y
             else:
                 return NotImplemented
+        def magnitude(self):
+            return math.sqrt(self.x * self.x + self.y * self.y)
 
 # Vector directions
 Vector2D.left = Vector2D(-1, 0)
@@ -49,7 +51,7 @@ Vector2D.down = Vector2D(0, 1)
 
 class Grid:
     start_pos = Vector2D(100, 100)
-    cell_count = 6
+    cell_count = 11
     cell_size = 30
     cell_render_width = 10
     line_thickness = 4
@@ -81,9 +83,11 @@ food_color = (255,0,0)
 food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = -0.1
-EAT_FOOD_REWARD = 2
-GAME_OVER_REWARD = -0.8
+NOTHING_REWARD = -0.2
+EAT_FOOD_REWARD = 3
+GAME_OVER_REWARD = -1
+STEP_TO_FOOD_REWARD = 0.15
+STEP_AWAY_FROM_FOOD_REWARD = -0.1
 
 class SnakeManager:
     """Manages spawning and moving of the parts"""
@@ -161,6 +165,7 @@ class SnakeManager:
         self.change_direction(action)
         self.reward = NOTHING_REWARD
 
+        old_pos = self.part_list[0]
         # Move each part to the position of the part before, but not the first one
         new_parts = [self.part_list[0]+ self.direction]
         for i in range(len(self.part_list)-1):
@@ -168,8 +173,10 @@ class SnakeManager:
         self.part_list = new_parts
         self.is_dir_changing = False
 
-
-
+        new_pos = self.part_list[0]
+        # Check if a step toward food has been done and if so add the reward
+        relative_food_distant = self.get_food_distant(old_pos) - self.get_food_distant(new_pos)
+        self.reward += STEP_TO_FOOD_REWARD if relative_food_distant > 0 else STEP_AWAY_FROM_FOOD_REWARD
 
         ### RL ONLY ###
 
@@ -308,6 +315,10 @@ class SnakeManager:
         # Append the direction
         state = torch.stack([state[0],state[1],state[2]])
         return state
+
+    def get_food_distant(self, pos: Vector2D):
+        d = pos - self.food
+        return d.magnitude()
                                         ### RENDERING ###
     #-------------------------------------------------------------------------------------------------------#
     def render_objects(self, screen: pygame.Surface):

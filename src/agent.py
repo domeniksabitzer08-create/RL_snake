@@ -20,11 +20,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 ### --------------------- SETUP --------------------- ###
 Lr = 0.0001
-Num_episodes = 100
+Num_episodes = 7000
+Max_steps = 200
 use_existing_model = True
-used_model_name = "DQN_256_V_20"
+used_model_name = "DQN_256_V_12"
 Training = not use_existing_model
-Experiment_name = "Debug_" + str(time.time())
+Experiment_name = "bigDQN_Better_Reward_long_run_V0" #+ str(time.time())
+
 
 ### ENVIRONMENT ###
 global Train_Env
@@ -44,6 +46,8 @@ class DQN(nn.Module):
         self.layer_stack = nn.Sequential(
             nn.Flatten(),
             nn.Linear(self.in_features, self.hidden_units),
+            nn.ReLU(),
+            nn.Linear(self.hidden_units, self.hidden_units),
             nn.ReLU(),
             nn.Linear(self.hidden_units, self.hidden_units),
             nn.ReLU(),
@@ -109,10 +113,9 @@ N_states = Grid.cell_count*Grid.cell_count*3
 # train
 Gamma = 0.99
 Epsilon = 1
-Min_epsilon = 0.01
+Min_epsilon = 0.02
 Epsilon_decay = 0.99
-Max_steps = 300
-N_capacity = 10000
+N_capacity = 100000
 Batch_size = 32
 Network_sync_rate = 1000
 # Tensorboard
