@@ -4,11 +4,9 @@ import time
 from collections import deque
 from collections import namedtuple
 
-
 import numpy as np
 import pygame.time
 import os
-
 
 from snake_classes import *
 from tqdm.auto import tqdm
@@ -20,12 +18,12 @@ from torch.utils.tensorboard import SummaryWriter
 
 ### --------------------- SETUP --------------------- ###
 Lr = 0.0001
-Num_episodes = 7000
+Num_episodes = 30000
 Max_steps = 200
-use_existing_model = True
-used_model_name = "DQN_256_V_12"
+use_existing_model = False
+used_model_name = "DQN_256_V_4"
 Training = not use_existing_model
-Experiment_name = "bigDQN_Better_Reward_long_run_V0" #+ str(time.time())
+Experiment_name = "extrem_reward_long_run_V1" #+ str(time.time())
 
 
 ### ENVIRONMENT ###
@@ -46,8 +44,6 @@ class DQN(nn.Module):
         self.layer_stack = nn.Sequential(
             nn.Flatten(),
             nn.Linear(self.in_features, self.hidden_units),
-            nn.ReLU(),
-            nn.Linear(self.hidden_units, self.hidden_units),
             nn.ReLU(),
             nn.Linear(self.hidden_units, self.hidden_units),
             nn.ReLU(),
@@ -89,14 +85,14 @@ Vector2D.down = Vector2D(0, 1)
 
 ### SAVING AND LOADING MODEL ###
 def save_model(model: torch.nn.Module):
-    base_path = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake\models"
+    base_path = r"C:\Domenik\Programming2\python-Projects\RL_snake\models"
     name = f"{model.__class__.__name__}_{model.hidden_units}_V_{len(os.listdir(base_path))}"
     print(f"saved model under name: {name}")
     torch.save(model, fr"{base_path}\{name}.pth")
     return fr"{base_path}\{name}.pth"
 
 def load_model(model_name: str):
-    base_path = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake\models"
+    base_path = r"C:\Domenik\Programming2\python-Projects\RL_snake\models"
     model_name = fr"{base_path}\{model_name}.pth"
     try:
         model = torch.load(model_name, weights_only=False)
@@ -120,7 +116,7 @@ Batch_size = 32
 Network_sync_rate = 1000
 # Tensorboard
 if Training:
-    BASE_DIR = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake"
+    BASE_DIR = r"C:\Domenik\Programming2\python-Projects\RL_snake"
     runs_path = BASE_DIR + r"\runs"
     exp_path = runs_path + fr"\{Experiment_name}"
     os.mkdir(exp_path)
@@ -348,7 +344,7 @@ def test():
 
 
 if __name__ == '__main__':
-    os.chdir(r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake")
+    os.chdir(r"C:\Domenik\Programming2\python-Projects\RL_snake")
     if Training:
         train()
     test()
