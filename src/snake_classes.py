@@ -1,3 +1,5 @@
+from operator import indexOf
+
 import pygame
 from dataclasses import dataclass
 from random import randint
@@ -6,7 +8,6 @@ import torch
 
 
 ### VECTOR CLASS ###
-
 @dataclass(frozen=True)
 class Vector2D:
         x: float
@@ -83,11 +84,11 @@ food_color = (255,0,0)
 food_render_size = Grid.cell_size
 
 ### REINFORCEMENT LEARNING VARIABLES ###
-NOTHING_REWARD = -0.3
-EAT_FOOD_REWARD = 7
-GAME_OVER_REWARD = -2
-STEP_TO_FOOD_REWARD = 0.15
-STEP_AWAY_FROM_FOOD_REWARD = -0.1
+NOTHING_REWARD = -0.01
+EAT_FOOD_REWARD = 1
+GAME_OVER_REWARD = -1
+STEP_TO_FOOD_REWARD = 0.0005
+STEP_AWAY_FROM_FOOD_REWARD = -0.0001
 
 class SnakeManager:
     """Manages spawning and moving of the parts"""
@@ -248,26 +249,14 @@ class SnakeManager:
             return False
 
     def change_direction(self, action):
-        # 0 -> left
-        # 1 -> straight
-        # 2 -> right
+        # 0 -> right
+        # 1 -> down
+        # 2 -> left
+        # 3 -> up
         clockwise_dir = [Vector2D.right, Vector2D.down, Vector2D.left, Vector2D.up]
-        idx = clockwise_dir.index(self.direction) # the direction as index in clockwise array
-        # 1. Make a left turn
-        if action == 0:
-            new_idx = idx-1
-            if new_idx == -1:
-                new_idx = 3
-        # 2. Stay straight
-        elif action == 1:
-            new_idx = idx
-        # 3. Make a right turn
-        else:
-            new_idx = idx+1
-            if new_idx == 4:
-                new_idx = 0
-        # Set the new direction depending on the action
-        self.direction = clockwise_dir[new_idx]
+        new_dir = clockwise_dir[action]
+        if new_dir != self.direction * (-1):
+            self.direction = new_dir
 
     def game_over(self):
         self.reward = GAME_OVER_REWARD

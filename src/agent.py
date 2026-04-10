@@ -18,19 +18,19 @@ from torch.utils.tensorboard import SummaryWriter
 
 ### --------------------- SETUP --------------------- ###
 Lr = 0.0001
-Num_episodes = 30000
-Max_steps = 200
+Num_episodes = 300
+Max_steps = 100
 use_existing_model = False
-used_model_name = "DQN_256_V_4"
+used_model_name = "DQCNN_256_V_17"
 Training = not use_existing_model
-Experiment_name = "extrem_reward_long_run_V1" #+ str(time.time())
+Experiment_name = "DQCNN_small_Grid_debug" + str(time.time())
 
 
 ### ENVIRONMENT ###
 global Train_Env
-Train_Env = SnakeManager(Vector2D(3,3),Vector2D.right,4, render=False)
+Train_Env = SnakeManager(Vector2D(3,3),Vector2D.right,5, render=False)
 global Test_Env
-Test_Env = SnakeManager(Vector2D(3,3),Vector2D.right,4, render=True)
+Test_Env = SnakeManager(Vector2D(3,3),Vector2D.right,5, render=True)
 
 
 
@@ -51,6 +51,27 @@ class DQN(nn.Module):
         )
     def forward(self, x):
         return self.layer_stack(x)
+
+class DQCNN(nn.Module):
+    def __init__(self, in_features, out_features, hidden_units=256):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.hidden_units = hidden_units
+
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels=in_features, out_channels=hidden_units, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=hidden_units, out_channels=hidden_units, kernel_size=3, stride=1),
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(in_features=hidden_units * 7 * 7, out_features=out_features),
+        )
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.classifier(x)
+        return x
 
 class ExperienceReplay:
     def __init__(self, capacity, batch_size):
@@ -85,14 +106,14 @@ Vector2D.down = Vector2D(0, 1)
 
 ### SAVING AND LOADING MODEL ###
 def save_model(model: torch.nn.Module):
-    base_path = r"C:\Domenik\Programming2\python-Projects\RL_snake\models"
+    base_path = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake\models"
     name = f"{model.__class__.__name__}_{model.hidden_units}_V_{len(os.listdir(base_path))}"
-    print(f"saved model under name: {name}")
     torch.save(model, fr"{base_path}\{name}.pth")
+    print(f"saved model under name: {name}")
     return fr"{base_path}\{name}.pth"
 
 def load_model(model_name: str):
-    base_path = r"C:\Domenik\Programming2\python-Projects\RL_snake\models"
+    base_path = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake\models"
     model_name = fr"{base_path}\{model_name}.pth"
     try:
         model = torch.load(model_name, weights_only=False)
@@ -103,20 +124,20 @@ def load_model(model_name: str):
         raise FileNotFoundError
 
 # action
-N_actions = 3
-N_states = Grid.cell_count*Grid.cell_count*3
+N_actions = 4
+N_states = 3
 # hyperparameters
 # train
 Gamma = 0.99
 Epsilon = 1
 Min_epsilon = 0.02
-Epsilon_decay = 0.99
+Epsilon_decay = 0.999
 N_capacity = 100000
 Batch_size = 32
 Network_sync_rate = 1000
 # Tensorboard
 if Training:
-    BASE_DIR = r"C:\Domenik\Programming2\python-Projects\RL_snake"
+    BASE_DIR = r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake"
     runs_path = BASE_DIR + r"\runs"
     exp_path = runs_path + fr"\{Experiment_name}"
     os.mkdir(exp_path)
@@ -132,18 +153,14 @@ def choose_action(state, policy: torch.nn.Module, env: SnakeManager):
         with torch.inference_mode():
             y_logit = policy(state)
             y_pred = torch.argmax(y_logit)
-            if y_pred > 2:
-                print(f"Error action is too big | y_logit : {y_logit} | y_pred: {y_pred} ")
-                while True:
-                    y =1
-            else:
-                return torch.argmax(policy(state))
+            return torch.argmax(policy(state))
 
 
 def test_model():
     # test data flow of model with dummy tensor
-    model = DQN(N_states, 3)
-    dummy_tensor = torch.rand(10)
+    print("test model")
+    model = DQCNN(3, 3)
+    dummy_tensor = torch.rand((1,3,11,11))
     # send tensor through model
     y_logit = model(dummy_tensor)
     y_pred = torch.argmax(torch.softmax(y_logit, dim=0))
@@ -170,7 +187,7 @@ print(f"using device: {device} ")
 if use_existing_model:
     policy_dqn = load_model(used_model_name).to(device)
 else:
-    policy_dqn = DQN(N_states, N_actions).to(device)
+    policy_dqn = DQCNN(N_states, N_actions).to(device)
 
 target_dqn = copy.deepcopy(policy_dqn)
 # load the state dict form the policy to the target dqn
@@ -344,7 +361,8 @@ def test():
 
 
 if __name__ == '__main__':
-    os.chdir(r"C:\Domenik\Programming2\python-Projects\RL_snake")
+    os.chdir(r"C:\Users\domen_s6zwlxv\PycharmProjects\RL_snake")
     if Training:
         train()
+
     test()
